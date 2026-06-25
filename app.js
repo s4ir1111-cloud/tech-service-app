@@ -59,6 +59,14 @@ const locations = [
   "Склад снабжения", "Офис", "Тренинг-центр", "Новая точка"
 ];
 
+const defaultRequesterByLocation = {
+  ...Object.fromEntries(cafeManagers.map((manager) => [manager.location, manager.name])),
+  "Гарден Кофе Тобольск": "Юлия Зуева",
+  "Кондитерский цех": "Галина Васильева",
+  "Обжарочный цех": "Александр Бокслер",
+  "Офис": "Иван Бережной",
+};
+
 const users = [
   {
     id: "skornyakov",
@@ -342,8 +350,24 @@ function updateRequestScope() {
   requesterInput.innerHTML = scopedRequesters.map((name) => `<option>${name}</option>`).join("");
   locationInput.value = fullAccess && scopedLocations.includes(selectedLocation) ? selectedLocation : scopedLocations[0];
   requesterInput.value = fullAccess && scopedRequesters.includes(selectedRequester) ? selectedRequester : scopedRequesters[0];
+  syncRequesterToLocation();
   locationInput.disabled = false;
   requesterInput.disabled = false;
+}
+
+function syncRequesterToLocation() {
+  const locationInput = document.querySelector("#locationInput");
+  const requesterInput = document.querySelector("#requesterInput");
+  const defaultRequester = defaultRequesterByLocation[locationInput.value];
+
+  if (!hasFullAccess()) {
+    requesterInput.value = currentUser.name;
+    return;
+  }
+
+  if (defaultRequester && requesters.includes(defaultRequester)) {
+    requesterInput.value = defaultRequester;
+  }
 }
 
 function updateDecision() {
@@ -569,6 +593,8 @@ document.addEventListener("input", (event) => {
 });
 
 document.querySelector("#ticketForm").addEventListener("submit", addTicketFromForm);
+document.querySelector("#locationInput").addEventListener("change", syncRequesterToLocation);
+document.querySelector("#locationInput").addEventListener("input", syncRequesterToLocation);
 function handleRoleChange(event) {
   currentUser = users.find((user) => user.id === event.target.value) || users[0];
   renderAll();
