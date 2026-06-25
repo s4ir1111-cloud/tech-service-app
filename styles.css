@@ -324,12 +324,14 @@ textarea {
 
 .segmented {
   display: flex;
+  flex-wrap: wrap;
   background: #eef2f1;
   border-radius: 8px;
   padding: 3px;
 }
 
 .segmented button {
+  flex: 1 1 auto;
   border: 0;
   background: transparent;
   border-radius: 6px;
