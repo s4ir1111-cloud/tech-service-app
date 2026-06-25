@@ -390,6 +390,8 @@ function renderMetrics() {
 function renderTickets() {
   const list = document.querySelector("#ticketList");
   const visible = getVisibleTickets().filter((ticket) => {
+    if (activeFilter === "new") return ticket.status === "new";
+    if (activeFilter === "in_progress") return ticket.status === "in_progress";
     if (activeFilter === "overdue") return isOverdue(ticket);
     if (activeFilter === "stale") return isStale(ticket);
     return true;
