@@ -30,32 +30,32 @@ const employees = [
 ];
 
 const cafeManagers = [
-  { id: "yarunova", name: "Дарья Ярунова", location: "Кофейня 01" },
-  { id: "chemyakin", name: "Станислав Чемякин", location: "Кофейня 02" },
-  { id: "stepanova", name: "Ксения Степанова", location: "Кофейня Видный сад" },
-  { id: "sekachev", name: "Алексей Секачев", location: "Кофейня 04" },
-  { id: "romicheva", name: "Надежда Ромичева", location: "Кофейня 05" },
-  { id: "radaev", name: "Андрей Радаев", location: "Кофейня 06" },
-  { id: "pankova", name: "Анастасия Панкова", location: "Кофейня 07" },
-  { id: "ostanina", name: "Полина Останина", location: "Кофейня 08" },
-  { id: "ovsyannikova", name: "Екатерина Овсянникова", location: "Кофейня 09" },
-  { id: "nikovskaya", name: "Анна Никовская", location: "Кофейня 10" },
-  { id: "naumova", name: "Надежда Наумова", location: "Кофейня 11" },
-  { id: "muhamedzyanova", name: "Ирина Мухамедзянова", location: "Кофейня 12" },
-  { id: "moskalenko", name: "Карина Москаленко", location: "Кофейня 13" },
-  { id: "militsanova", name: "Камила Милицанова", location: "Кофейня 14" },
-  { id: "loushkina", name: "Арина Лоушкина", location: "Кофейня 15" },
-  { id: "kortosov", name: "Алексей Кортосов", location: "Кофейня 16" },
-  { id: "kondrateva", name: "Арина Кондратьева", location: "Кофейня 17" },
-  { id: "kiseleva", name: "Екатерина Киселева", location: "Кофейня 18" },
-  { id: "kesov", name: "Анастасий Кесов", location: "Кофейня 19" },
-  { id: "kalchakov", name: "Денис Калчаков", location: "Кофейня 20" },
+  { id: "yarunova", name: "Дарья Ярунова", location: "Океан" },
+  { id: "chemyakin", name: "Станислав Чемякин", location: "Свердлова" },
+  { id: "stepanova", name: "Ксения Степанова", location: "Видный" },
+  { id: "sekachev", name: "Алексей Секачев", location: "Паруса" },
+  { id: "romicheva", name: "Надежда Ромичева", location: "Панорама" },
+  { id: "radaev", name: "Андрей Радаев", location: "Калинка" },
+  { id: "pankova", name: "Анастасия Панкова", location: "Новин" },
+  { id: "ostanina", name: "Полина Останина", location: "Драмтеатр" },
+  { id: "ovsyannikova", name: "Екатерина Овсянникова", location: "Газпром" },
+  { id: "nikovskaya", name: "Анна Никовская", location: "Осипенко" },
+  { id: "naumova", name: "Надежда Наумова", location: "Европа" },
+  { id: "muhamedzyanova", name: "Ирина Мухамедзянова", location: "Гагарина" },
+  { id: "moskalenko", name: "Карина Москаленко", location: "Домашний" },
+  { id: "militsanova", name: "Камила Милицанова", location: "Ворлд Класс" },
+  { id: "loushkina", name: "Арина Лоушкина", location: "Советская" },
+  { id: "kortosov", name: "Алексей Кортосов", location: "Мельникайте" },
+  { id: "kondrateva", name: "Арина Кондратьева", location: "Арсиб" },
+  { id: "kiseleva", name: "Екатерина Киселева", location: "Прео" },
+  { id: "kesov", name: "Анастасий Кесов", location: "Преображенский" },
+  { id: "kalchakov", name: "Денис Калчаков", location: "Гарден Кофе Сургут" },
 ];
 
 const requesters = [...cafeManagers.map((manager) => manager.name), "Юлия Зуева", "Галина Васильева", "Александр Бокслер", "Иван Бережной"];
 
 const locations = [
-  ...cafeManagers.map((manager) => manager.location), "Кофейня Сургут", "Кондитерский цех", "Обжарочный цех",
+  ...cafeManagers.map((manager) => manager.location), "Гарден Кофе Тобольск", "Кондитерский цех", "Обжарочный цех",
   "Склад снабжения", "Офис", "Тренинг-центр", "Новая точка"
 ];
 
@@ -215,10 +215,10 @@ const categories = {
 let tickets = [];
 
 tickets = [
-  makeTicket("Кофейня Видный сад", "Ксения Степанова", "Труба потекла под барной мойкой, вода уходит на пол", "critical", -6, "in_progress"),
+  makeTicket("Видный", "Ксения Степанова", "Труба потекла под барной мойкой, вода уходит на пол", "critical", -6, "in_progress"),
   makeTicket("Кондитерский цех", "Екатерина Пушкарева", "Печь периодически выключается, нужна диагностика оборудования", "high", -10, "new"),
   makeTicket("Обжарочный цех", "Александр Бокслер", "Нужен фильтр и плановая закупка расходников для кофемашины", "normal", -42, "waiting"),
-  makeTicket("Кофейня Сургут", "Юлия Зуева", "В холодильной витрине растет температура", "critical", -2, "in_progress"),
+  makeTicket("Гарден Кофе Сургут", "Юлия Зуева", "В холодильной витрине растет температура", "critical", -2, "in_progress"),
   makeTicket("Офис", "Иван Бережной", "В переговорной не работает свет и выбивает автомат", "high", -26, "in_progress"),
   makeTicket("Новая точка", "Анна Алыбина", "Подрядчику нужен доступ для ремонта двери", "normal", -31, "waiting"),
 ];
@@ -552,7 +552,7 @@ function addTicketFromForm(event) {
 
 function seedFlow() {
   const samples = [
-    ["Кофейня Видный сад", "Дарья Ярунова", "Засорилась канализация, вода плохо уходит", "high"],
+    ["Видный", "Дарья Ярунова", "Засорилась канализация, вода плохо уходит", "high"],
     ["Кондитерский цех", "Галина Васильева", "Нужно согласовать закупку запчастей для печи", "normal"],
     ["Офис", "Иван Бережной", "Кондиционер шумит и не охлаждает переговорную", "normal"],
     ["Обжарочный цех", "Александр Бокслер", "Не включается кофемолка после скачка электричества", "critical"],
