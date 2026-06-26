@@ -19,6 +19,8 @@ const employees = [
   { id: 41, name: "Екатерина Киселева", department: "Структурные подразделения(Кофейни)", email: "kiselevabod02@mail.ru", phone: "+7 912 999-56-58" },
   { id: 42, name: "Анастасий Кесов", department: "Структурные подразделения(Кофейни)", email: "kesov77@yandex.ru", phone: "+7 922 480-49-44" },
   { id: 45, name: "Денис Калчаков", department: "Структурные подразделения(Кофейни)", email: "d.kalchakov@gardencoffee.ru", phone: "+7 992 309-09-72" },
+  { id: 2, name: "Наталья Шакуто", department: "Отдел финансового планирования и учета", email: "", phone: "+7 922 395-02-81" },
+  { id: 8, name: "Ирина Тютикова", department: "Тренинг-центр", email: "i.tutikova@gardencoffee.ru", phone: "+7 982 673-16-79" },
   { id: 14, name: "Александр Скорняков", department: "Проектирование инфраструктуры", email: "a.skornyakov@gardencoffee.ru", phone: "+7 919 930-27-32" },
   { id: 21, name: "Сергей Попов", department: "Проектирование инфраструктуры", email: "", phone: "+7 982 987-97-71" },
   { id: 37, name: "Рустам Латыпов", department: "Проектирование инфраструктуры", email: "Rustam0913@yandex.ru", phone: "+7 922 263-89-29" },
@@ -52,19 +54,32 @@ const cafeManagers = [
   { id: "kalchakov", name: "Денис Калчаков", location: "Гарден Кофе Сургут" },
 ];
 
-const requesters = [...cafeManagers.map((manager) => manager.name), "Юлия Зуева", "Галина Васильева", "Александр Бокслер", "Иван Бережной"];
-
-const locations = [
-  ...cafeManagers.map((manager) => manager.location), "Гарден Кофе Тобольск", "Кондитерский цех", "Обжарочный цех",
-  "Склад снабжения", "Офис", "Тренинг-центр", "Новая точка"
+const departmentManagers = [
+  { id: "shakuto", name: "Наталья Шакуто", location: "Бухгалтерия", roleName: "Руководитель бухгалтерии" },
+  { id: "tutikova", name: "Ирина Тютикова", location: "Тренинг-центр", roleName: "Руководитель тренинг-центра" },
+  { id: "office-head", name: "Иван Бережной", location: "Офис", roleName: "Руководитель офиса" },
 ];
+
+const requesters = [...new Set([
+  ...cafeManagers.map((manager) => manager.name),
+  ...departmentManagers.map((manager) => manager.name),
+  "Юлия Зуева",
+  "Галина Васильева",
+  "Александр Бокслер",
+  "Иван Бережной",
+])];
+
+const locations = [...new Set([
+  ...cafeManagers.map((manager) => manager.location), "Гарден Кофе Тобольск", "Кондитерский цех", "Обжарочный цех",
+  "Склад снабжения", "Бухгалтерия", "Офис", "Тренинг-центр", "Новая точка"
+])];
 
 const defaultRequesterByLocation = {
   ...Object.fromEntries(cafeManagers.map((manager) => [manager.location, manager.name])),
+  ...Object.fromEntries(departmentManagers.map((manager) => [manager.location, manager.name])),
   "Гарден Кофе Тобольск": "Юлия Зуева",
   "Кондитерский цех": "Галина Васильева",
   "Обжарочный цех": "Александр Бокслер",
-  "Офис": "Иван Бережной",
 };
 
 const users = [
@@ -97,6 +112,12 @@ const users = [
     label: `${manager.name} · управляющая`,
     role: "manager",
     roleName: "Управляющая кофейни",
+    permissions: "own",
+  })),
+  ...departmentManagers.map((manager) => ({
+    ...manager,
+    label: `${manager.name} · ${manager.location.toLowerCase()}`,
+    role: "manager",
     permissions: "own",
   })),
   {
