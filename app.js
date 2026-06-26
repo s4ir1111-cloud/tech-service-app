@@ -32,26 +32,36 @@ const employees = [
 ];
 
 const cafeManagers = [
-  { id: "yarunova", name: "Дарья Ярунова", location: "Океан" },
-  { id: "chemyakin", name: "Станислав Чемякин", location: "Свердлова" },
+  { id: "yarunova", name: "Дарья Ярунова", location: "Гагарина" },
+  { id: "chemyakin", name: "Станислав Чемякин", location: "Океан" },
   { id: "stepanova", name: "Ксения Степанова", location: "Видный" },
-  { id: "sekachev", name: "Алексей Секачев", location: "Паруса" },
-  { id: "romicheva", name: "Надежда Ромичева", location: "Панорама" },
-  { id: "radaev", name: "Андрей Радаев", location: "Калинка" },
-  { id: "pankova", name: "Анастасия Панкова", location: "Новин" },
-  { id: "ostanina", name: "Полина Останина", location: "Драмтеатр" },
-  { id: "ovsyannikova", name: "Екатерина Овсянникова", location: "Газпром" },
-  { id: "nikovskaya", name: "Анна Никовская", location: "Осипенко" },
-  { id: "naumova", name: "Надежда Наумова", location: "Европа" },
-  { id: "muhamedzyanova", name: "Ирина Мухамедзянова", location: "Гагарина" },
-  { id: "moskalenko", name: "Карина Москаленко", location: "Домашний" },
-  { id: "militsanova", name: "Камила Милицанова", location: "Ворлд Класс" },
-  { id: "loushkina", name: "Арина Лоушкина", location: "Советская" },
-  { id: "kortosov", name: "Алексей Кортосов", location: "Мельникайте" },
-  { id: "kondrateva", name: "Арина Кондратьева", location: "Арсиб" },
-  { id: "kiseleva", name: "Екатерина Киселева", location: "Прео" },
-  { id: "kesov", name: "Анастасий Кесов", location: "Преображенский" },
-  { id: "kalchakov", name: "Денис Калчаков", location: "Гарден Кофе Сургут" },
+  { id: "sekachev", name: "Алексей Секачев", location: "Советская" },
+  { id: "romicheva", name: "Надежда Ромичева", location: "Мельница, Парус", locations: ["Мельница", "Парус"] },
+  { id: "radaev", name: "Андрей Радаев", location: "Свердлова" },
+  { id: "pankova", name: "Анастасия Панкова", location: "Калинка" },
+  { id: "ostanina", name: "Полина Останина", location: "World Class" },
+  { id: "ovsyannikova", name: "Екатерина Овсянникова", location: "Свердлова" },
+  { id: "nikovskaya", name: "Анна Никовская", location: "Арсиб" },
+  { id: "naumova", name: "Надежда Наумова", location: "Калинка" },
+  { id: "muhamedzyanova", name: "Ирина Мухамедзянова", location: "Советская" },
+  { id: "moskalenko", name: "Карина Москаленко", location: "Мельница" },
+  { id: "militsanova", name: "Камила Милицанова", location: "Евро" },
+  { id: "loushkina", name: "Арина Лоушкина", location: "Драм" },
+  { id: "kortosov", name: "Алексей Кортосов", location: "Арсиб" },
+  { id: "kondrateva", name: "Арина Кондратьева", location: "Панорама" },
+  { id: "kiseleva", name: "Екатерина Киселева", location: "World Class" },
+  { id: "kesov", name: "Анастасий Кесов", location: "Новин" },
+  { id: "kalchakov", name: "Денис Калчаков", location: "Евро" },
+  { id: "kalinovskaya", name: "Аделина Калиновская", location: "Домашний" },
+  { id: "ignatov", name: "Станислав Игнатов", location: "Гагарина" },
+  { id: "zabaluev", name: "Иван Забалуев", location: "Панорама" },
+  { id: "gerasimenko", name: "Татьяна Герасименко", location: "Парус" },
+  { id: "geynbikhner", name: "Екатерина Гейнбихнер", location: "Новин" },
+  { id: "galkina", name: "Юлия Галкина", location: "Домашний" },
+  { id: "vorobyev", name: "Денис Воробьев", location: "Прео" },
+  { id: "batinov", name: "Данил Батинов", location: "Океан" },
+  { id: "baranyuk", name: "Николай Баранюк", location: "Драм" },
+  { id: "agafonova", name: "Анастасия Агафонова", location: "Видный" },
 ];
 
 const departmentManagers = [
@@ -70,17 +80,27 @@ const requesters = [...new Set([
 ])];
 
 const locations = [...new Set([
-  ...cafeManagers.map((manager) => manager.location), "Гарден Кофе Тобольск", "Кондитерский цех", "Обжарочный цех",
+  ...cafeManagers.flatMap((manager) => getUserLocations(manager)), "Гарден Кофе Сургут", "Гарден Кофе Тобольск", "Кондитерский цех", "Обжарочный цех",
   "Склад снабжения", "Бухгалтерия", "Офис", "Тренинг-центр", "Новая точка"
 ])];
 
-const defaultRequesterByLocation = {
-  ...Object.fromEntries(cafeManagers.map((manager) => [manager.location, manager.name])),
-  ...Object.fromEntries(departmentManagers.map((manager) => [manager.location, manager.name])),
+const defaultRequesterByLocation = cafeManagers.reduce((map, manager) => {
+  getUserLocations(manager).forEach((location) => {
+    if (!map[location]) map[location] = manager.name;
+  });
+  return map;
+}, {
+  ...departmentManagers.reduce((map, manager) => {
+    getUserLocations(manager).forEach((location) => {
+      if (!map[location]) map[location] = manager.name;
+    });
+    return map;
+  }, {}),
+  "Гарден Кофе Сургут": "Юлия Зуева",
   "Гарден Кофе Тобольск": "Юлия Зуева",
   "Кондитерский цех": "Галина Васильева",
   "Обжарочный цех": "Александр Бокслер",
-};
+});
 
 const users = [
   {
@@ -345,8 +365,13 @@ function hasFullAccess() {
   return currentUser.permissions === "full";
 }
 
+function getUserLocations(user) {
+  if (user.locations) return user.locations;
+  return user.location ? [user.location] : [];
+}
+
 function isOwnTicket(ticket) {
-  return ticket.requester === currentUser.name || ticket.location === currentUser.location;
+  return ticket.requester === currentUser.name || getUserLocations(currentUser).includes(ticket.location);
 }
 
 function getVisibleTickets() {
