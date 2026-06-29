@@ -102,6 +102,10 @@ const defaultRequesterByLocation = cafeManagers.reduce((map, manager) => {
   "Обжарочный цех": "Александр Бокслер",
 });
 
+const notificationEndpoint = window.TECH_SERVICE_NOTIFY_ENDPOINT
+  || (window.location.hostname.endsWith("vercel.app") ? "/api/notify" : "");
+const notificationClientKey = window.TECH_SERVICE_NOTIFY_KEY || "";
+
 const users = [
   {
     id: "skornyakov",
@@ -351,6 +355,47 @@ function priorityLabel(priority) {
 
 function statusLabel(status) {
   return { new: "Новая", in_progress: "В работе", waiting: "Ожидает", done: "Готово" }[status];
+}
+
+function getTicketNotificationPayload(ticket) {
+  const engineer = engineers.find((item) => item.id === ticket.assignee);
+  return {
+    id: ticket.id,
+    location: ticket.location,
+    requester: ticket.requester,
+    description: ticket.description,
+    priority: ticket.priority,
+    priorityLabel: priorityLabel(ticket.priority),
+    category: categories[ticket.category].label,
+    status: ticket.status,
+    statusLabel: statusLabel(ticket.status),
+    assigneeName: engineer?.name || "Не назначен",
+    dueText: `до ${formatDate(ticket.dueAt)}`,
+  };
+}
+
+async function sendNotification(type, ticket) {
+  if (!notificationEndpoint) return;
+
+  try {
+    const headers = { "Content-Type": "application/json" };
+    if (notificationClientKey) headers["X-Notify-Key"] = notificationClientKey;
+
+    const response = await fetch(notificationEndpoint, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        type,
+        ticket: getTicketNotificationPayload(ticket),
+      }),
+    });
+
+    if (!response.ok) {
+      console.warn("VK notification failed", await response.text());
+    }
+  } catch (error) {
+    console.warn("VK notification failed", error);
+  }
 }
 
 function isOverdue(ticket) {
@@ -617,6 +662,7 @@ function addTicketFromForm(event) {
   const ticket = makeTicket(location, requester, description, priority, 0, "new");
   ticket.visitRequired = visitRequired;
   tickets = [ticket, ...tickets];
+  sendNotification("ticket_created", ticket);
   event.target.reset();
   renderAll();
   document.querySelector("#tickets").scrollIntoView({ behavior: "smooth", block: "start" });
@@ -670,8 +716,14 @@ document.querySelector("#ticketList").addEventListener("click", (event) => {
   const ticket = tickets.find((item) => item.id === button.dataset.id);
   if (!ticket) return;
 
-  if (button.dataset.action === "progress") ticket.status = "in_progress";
-  if (button.dataset.action === "done") ticket.status = "done";
+  if (button.dataset.action === "progress") {
+    ticket.status = "in_progress";
+    sendNotification("ticket_in_progress", ticket);
+  }
+  if (button.dataset.action === "done") {
+    ticket.status = "done";
+    sendNotification("ticket_done", ticket);
+  }
   ticket.updatedAt = new Date();
   renderAll();
 });
