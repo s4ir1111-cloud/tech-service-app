@@ -83,7 +83,7 @@ function unique(values) {
 function pickRecipients(event) {
   const ticket = event.ticket || {};
   if (event.type === "ticket_created") {
-    return unique(["Александр Скорняков", ticket.assigneeName]);
+    return unique(["Александр Скорняков", "Кристина Анастасова", ticket.assigneeName]);
   }
   if (event.type === "ticket_in_progress" || event.type === "ticket_done") {
     return unique([ticket.requester]);
@@ -186,7 +186,11 @@ module.exports = async function handler(req, res) {
     const recipients = pickRecipients(event);
     const results = [];
     for (const name of recipients) {
-      results.push(await sendVkMessage(name, message, token));
+      try {
+        results.push(await sendVkMessage(name, message, token));
+      } catch (error) {
+        results.push({ name, sent: false, error: error.message });
+      }
     }
 
     res.statusCode = 200;
