@@ -277,11 +277,12 @@ tickets = [
 ];
 
 let activeFilter = "all";
+let assigneeTouched = false;
 
-function makeTicket(location, requester, description, priority = "normal", createdShiftHours = 0, status = "new") {
+function makeTicket(location, requester, description, priority = "normal", createdShiftHours = 0, status = "new", assigneeOverride = null) {
   const category = detectCategory(description);
   const createdAt = addHours(new Date(), createdShiftHours);
-  const assignee = chooseAssignee(category, priority);
+  const assignee = assigneeOverride || chooseAssignee(category, priority);
   const dueAt = addHours(createdAt, categories[category].sla[priority]);
   const updatedAt = addHours(createdAt, status === "waiting" ? 1 : Math.min(6, Math.abs(createdShiftHours) / 2));
 
@@ -415,6 +416,10 @@ function getUserLocations(user) {
   return user.location ? [user.location] : [];
 }
 
+function getPreferredLocation(user) {
+  return getUserLocations(user)[0] || locations[0];
+}
+
 function isOwnTicket(ticket) {
   return ticket.requester === currentUser.name || getUserLocations(currentUser).includes(ticket.location);
 }
@@ -425,6 +430,9 @@ function getVisibleTickets() {
 
 function populateSelects() {
   document.querySelector("#roleInput").innerHTML = users.map((user) => `<option value="${user.id}">${user.label}</option>`).join("");
+  document.querySelector("#assigneeInput").innerHTML = engineers
+    .map((engineer) => `<option value="${engineer.id}">${engineer.name} · ${engineer.role}</option>`)
+    .join("");
   updateRequestScope();
 }
 
@@ -436,10 +444,16 @@ function updateRequestScope() {
   const requesterInput = document.querySelector("#requesterInput");
   const selectedLocation = locationInput.value;
   const selectedRequester = requesterInput.value;
+  const preferredLocation = getPreferredLocation(currentUser);
 
   locationInput.innerHTML = scopedLocations.map((location) => `<option>${location}</option>`).join("");
   requesterInput.innerHTML = scopedRequesters.map((name) => `<option>${name}</option>`).join("");
-  locationInput.value = fullAccess && scopedLocations.includes(selectedLocation) ? selectedLocation : scopedLocations[0];
+  locationInput.value =
+    fullAccess && scopedLocations.includes(selectedLocation)
+      ? selectedLocation
+      : scopedLocations.includes(preferredLocation)
+        ? preferredLocation
+        : scopedLocations[0];
   requesterInput.value = fullAccess && scopedRequesters.includes(selectedRequester) ? selectedRequester : scopedRequesters[0];
   syncRequesterToLocation();
   locationInput.disabled = false;
@@ -464,7 +478,14 @@ function syncRequesterToLocation() {
 function updateDecision() {
   const text = document.querySelector("#descriptionInput").value.trim();
   const priority = document.querySelector("#priorityInput").value;
+  const assigneeInput = document.querySelector("#assigneeInput");
   const box = document.querySelector("#decisionBox");
+  const category = text ? detectCategory(text) : "coordination";
+  const recommendedAssigneeId = chooseAssignee(category, priority);
+
+  if (!assigneeTouched || !assigneeInput.value) {
+    assigneeInput.value = recommendedAssigneeId;
+  }
 
   if (!text) {
     box.innerHTML = `
@@ -475,15 +496,18 @@ function updateDecision() {
     return;
   }
 
-  const category = detectCategory(text);
-  const assigneeId = chooseAssignee(category, priority);
-  const engineer = engineers.find((item) => item.id === assigneeId);
+  const engineer = engineers.find((item) => item.id === assigneeInput.value) || engineers.find((item) => item.id === recommendedAssigneeId);
+  const recommendedEngineer = engineers.find((item) => item.id === recommendedAssigneeId);
   const sla = categories[category].sla[priority];
+  const routeNote =
+    engineer.id === recommendedAssigneeId
+      ? "Выбран рекомендованный исполнитель по специализации и загрузке."
+      : `Рекомендация системы: ${recommendedEngineer.name}. Назначение изменено вручную.`;
 
   box.innerHTML = `
     <span>Маршрутизация</span>
     <strong>${categories[category].label} → ${engineer.name}</strong>
-    <p>${engineer.role}. SLA: ${sla} ч. Причина: совпадение ключевых признаков и минимальная текущая загрузка среди подходящих специалистов.</p>
+    <p>${engineer.role}. SLA: ${sla} ч. ${routeNote}</p>
   `;
 }
 
@@ -656,14 +680,16 @@ function addTicketFromForm(event) {
   const description = document.querySelector("#descriptionInput").value.trim();
   const priority = document.querySelector("#priorityInput").value;
   const visitRequired = document.querySelector("#visitInput").value === "yes";
+  const assignee = document.querySelector("#assigneeInput").value;
 
   if (!description) return;
 
-  const ticket = makeTicket(location, requester, description, priority, 0, "new");
+  const ticket = makeTicket(location, requester, description, priority, 0, "new", assignee);
   ticket.visitRequired = visitRequired;
   tickets = [ticket, ...tickets];
   sendNotification("ticket_created", ticket);
   event.target.reset();
+  assigneeTouched = false;
   renderAll();
   document.querySelector("#tickets").scrollIntoView({ behavior: "smooth", block: "start" });
 }
@@ -687,8 +713,17 @@ document.addEventListener("input", (event) => {
 document.querySelector("#ticketForm").addEventListener("submit", addTicketFromForm);
 document.querySelector("#locationInput").addEventListener("change", syncRequesterToLocation);
 document.querySelector("#locationInput").addEventListener("input", syncRequesterToLocation);
+document.querySelector("#assigneeInput").addEventListener("change", () => {
+  assigneeTouched = true;
+  updateDecision();
+});
+document.querySelector("#assigneeInput").addEventListener("input", () => {
+  assigneeTouched = true;
+  updateDecision();
+});
 function handleRoleChange(event) {
   currentUser = users.find((user) => user.id === event.target.value) || users[0];
+  assigneeTouched = false;
   renderAll();
   document.querySelector("#new-ticket").scrollIntoView({ behavior: "smooth", block: "start" });
 }
@@ -699,6 +734,7 @@ document.querySelector("#seedButton").addEventListener("click", seedFlow);
 document.querySelector("#quickPipe").addEventListener("click", () => {
   document.querySelector("#descriptionInput").value = "Труба потекла под мойкой, вода быстро набирается на полу";
   document.querySelector("#priorityInput").value = "critical";
+  assigneeTouched = false;
   updateDecision();
   document.querySelector("#new-ticket").scrollIntoView({ behavior: "smooth", block: "start" });
 });
