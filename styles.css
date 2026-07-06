@@ -501,6 +501,37 @@ textarea {
   font-weight: 800;
 }
 
+.photo-field {
+  display: grid;
+  gap: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px;
+  background: #fbfcfc;
+}
+
+.photo-field-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.photo-field-head span,
+.photo-field-head small {
+  display: block;
+}
+
+.photo-field-head span {
+  color: var(--ink);
+  font-weight: 800;
+}
+
+.photo-field-head small {
+  color: var(--muted);
+  margin-top: 3px;
+}
+
 .modal-actions .primary {
   border-color: var(--accent);
   background: var(--accent);
@@ -530,6 +561,15 @@ textarea {
   max-height: 280px;
   object-fit: contain;
   border-radius: 6px;
+}
+
+.photo-preview.compact {
+  min-height: 112px;
+  margin: 0;
+}
+
+.photo-preview.compact img {
+  max-height: 180px;
 }
 
 .engineer {
