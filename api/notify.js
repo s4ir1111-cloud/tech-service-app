@@ -157,7 +157,8 @@ function formatMessage(event) {
       `Локация: ${ticket.location}`,
       `Ответственный: ${assignee}`,
       `Проблема: ${ticket.description}`,
-    ].join("\n");
+      ticket.completionProofName ? `Фото подтверждения: ${ticket.completionProofName}` : "",
+    ].filter(Boolean).join("\n");
   }
 
   return "";
