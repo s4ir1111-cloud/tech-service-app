@@ -111,6 +111,23 @@
                 <select id="assigneeInput"></select>
               </label>
             </div>
+            <div class="photo-field full">
+              <div class="photo-field-head">
+                <div>
+                  <span>Фото проблемы</span>
+                  <small>Обязательно для создания заявки</small>
+                </div>
+              </div>
+              <div class="photo-actions">
+                <button type="button" id="requestLibraryButton">Выбрать из медиатеки</button>
+                <button type="button" id="requestCameraButton">Сделать фото</button>
+              </div>
+              <input id="requestPhotoInput" type="file" accept="image/*" hidden />
+              <input id="requestCameraInput" type="file" accept="image/*" capture="environment" hidden />
+              <div class="photo-preview compact" id="requestPhotoPreview">
+                <span>Фото ещё не выбрано</span>
+              </div>
+            </div>
             <button class="primary full" type="submit">Создать и назначить</button>
           </form>
           <div class="decision" id="decisionBox">
@@ -197,6 +214,6 @@
       </div>
     </div>
 
-    <script src="./app.js?v=20260706-1"></script>
+    <script src="./app.js?v=20260706-2"></script>
   </body>
 </html>
