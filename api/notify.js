@@ -138,6 +138,7 @@ function formatMessage(event) {
       `Проблема: ${ticket.description}`,
       `Приоритет: ${priority}`,
       `Ответственный: ${assignee}`,
+      ticket.requestPhotoName ? `Фото проблемы: ${ticket.requestPhotoName}` : "",
       ticket.dueText ? `SLA: ${ticket.dueText}` : "",
     ].filter(Boolean).join("\n");
   }

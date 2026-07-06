@@ -278,6 +278,7 @@ tickets = [
 
 let activeFilter = "all";
 let assigneeTouched = false;
+let requestPhotoProof = null;
 let pendingCompletionTicketId = null;
 let pendingCompletionProof = null;
 
@@ -383,6 +384,8 @@ function getTicketNotificationPayload(ticket) {
     statusLabel: statusLabel(ticket.status),
     assigneeName: engineer?.name || "Не назначен",
     dueText: `до ${formatDate(ticket.dueAt)}`,
+    requestPhotoName: ticket.requestPhoto?.name || "",
+    requestPhotoCapturedAt: ticket.requestPhoto?.capturedAt || "",
     completionProofName: ticket.completionProof?.name || "",
     completionProofCapturedAt: ticket.completionProof?.capturedAt || "",
   };
@@ -556,9 +559,21 @@ function renderTickets() {
       const flags = [
         isOverdue(ticket) ? `<span class="tag danger">Просрочено</span>` : "",
         isStale(ticket) ? `<span class="tag warning">Зависла</span>` : "",
+        ticket.requestPhoto ? `<span class="tag">Фото проблемы</span>` : "",
         ticket.status === "done" ? `<span class="tag ok">Закрыта</span>` : "",
         ticket.completionProof ? `<span class="tag ok">Фото подтверждено</span>` : "",
       ].join("");
+      const requestPhoto = ticket.requestPhoto
+        ? `
+          <div class="completion-proof">
+            <img src="${ticket.requestPhoto.dataUrl}" alt="Фото проблемы ${ticket.id}" />
+            <div>
+              <strong>Фото проблемы</strong>
+              <span>${escapeHtml(ticket.requestPhoto.name)} · ${formatDate(new Date(ticket.requestPhoto.capturedAt))}</span>
+            </div>
+          </div>
+        `
+        : "";
       const completionProof = ticket.completionProof
         ? `
           <div class="completion-proof">
@@ -591,6 +606,7 @@ function renderTickets() {
               <span class="tag">${engineer.name}</span>
               ${flags}
             </div>
+            ${requestPhoto}
             ${completionProof}
           </div>
           <div class="ticket-actions ${hasFullAccess() ? "" : "hidden"}">
@@ -705,6 +721,54 @@ function applyRoleInterface() {
   }
 }
 
+function readPhotoFile(file, previewSelector, onReady) {
+  const preview = document.querySelector(previewSelector);
+
+  if (!file) return;
+
+  if (!file.type.startsWith("image/")) {
+    preview.innerHTML = `<span>Нужно выбрать изображение.</span>`;
+    onReady(null);
+    return;
+  }
+
+  if (file.size > 8 * 1024 * 1024) {
+    preview.innerHTML = `<span>Фото слишком большое. Максимум 8 МБ.</span>`;
+    onReady(null);
+    return;
+  }
+
+  const reader = new FileReader();
+  reader.onload = () => {
+    const proof = {
+      name: file.name || "Фото",
+      type: file.type,
+      size: file.size,
+      dataUrl: reader.result,
+      capturedAt: new Date().toISOString(),
+    };
+    preview.innerHTML = `
+      <img src="${proof.dataUrl}" alt="Предпросмотр фото" />
+      <span>${escapeHtml(proof.name)}</span>
+    `;
+    onReady(proof);
+  };
+  reader.readAsDataURL(file);
+}
+
+function resetRequestPhoto() {
+  requestPhotoProof = null;
+  document.querySelector("#requestPhotoInput").value = "";
+  document.querySelector("#requestCameraInput").value = "";
+  document.querySelector("#requestPhotoPreview").innerHTML = `<span>Фото ещё не выбрано</span>`;
+}
+
+function handleRequestPhoto(event) {
+  readPhotoFile(event.target.files?.[0], "#requestPhotoPreview", (proof) => {
+    requestPhotoProof = proof;
+  });
+}
+
 function addTicketFromForm(event) {
   event.preventDefault();
   const location = document.querySelector("#locationInput").value;
@@ -715,13 +779,19 @@ function addTicketFromForm(event) {
   const assignee = document.querySelector("#assigneeInput").value;
 
   if (!description) return;
+  if (!requestPhotoProof) {
+    document.querySelector("#requestPhotoPreview").innerHTML = `<span>Добавьте фото проблемы перед созданием заявки.</span>`;
+    return;
+  }
 
   const ticket = makeTicket(location, requester, description, priority, 0, "new", assignee);
   ticket.visitRequired = visitRequired;
+  ticket.requestPhoto = requestPhotoProof;
   tickets = [ticket, ...tickets];
   sendNotification("ticket_created", ticket);
   event.target.reset();
   assigneeTouched = false;
+  resetRequestPhoto();
   renderAll();
   document.querySelector("#tickets").scrollIntoView({ behavior: "smooth", block: "start" });
 }
@@ -760,37 +830,10 @@ function closeCompletionModal() {
 }
 
 function handleCompletionPhoto(event) {
-  const file = event.target.files?.[0];
-  if (!file) return;
-
-  if (!file.type.startsWith("image/")) {
-    document.querySelector("#completionPreview").innerHTML = `<span>Нужно выбрать изображение.</span>`;
-    document.querySelector("#completionConfirm").disabled = true;
-    return;
-  }
-
-  if (file.size > 8 * 1024 * 1024) {
-    document.querySelector("#completionPreview").innerHTML = `<span>Фото слишком большое. Максимум 8 МБ.</span>`;
-    document.querySelector("#completionConfirm").disabled = true;
-    return;
-  }
-
-  const reader = new FileReader();
-  reader.onload = () => {
-    pendingCompletionProof = {
-      name: file.name || "Фото выполнения",
-      type: file.type,
-      size: file.size,
-      dataUrl: reader.result,
-      capturedAt: new Date().toISOString(),
-    };
-    document.querySelector("#completionPreview").innerHTML = `
-      <img src="${pendingCompletionProof.dataUrl}" alt="Предпросмотр фото подтверждения" />
-      <span>${escapeHtml(pendingCompletionProof.name)}</span>
-    `;
-    document.querySelector("#completionConfirm").disabled = false;
-  };
-  reader.readAsDataURL(file);
+  readPhotoFile(event.target.files?.[0], "#completionPreview", (proof) => {
+    pendingCompletionProof = proof;
+    document.querySelector("#completionConfirm").disabled = !pendingCompletionProof;
+  });
 }
 
 function confirmTicketCompletion() {
@@ -810,6 +853,14 @@ document.addEventListener("input", (event) => {
 });
 
 document.querySelector("#ticketForm").addEventListener("submit", addTicketFromForm);
+document.querySelector("#requestLibraryButton").addEventListener("click", () => {
+  document.querySelector("#requestPhotoInput").click();
+});
+document.querySelector("#requestCameraButton").addEventListener("click", () => {
+  document.querySelector("#requestCameraInput").click();
+});
+document.querySelector("#requestPhotoInput").addEventListener("change", handleRequestPhoto);
+document.querySelector("#requestCameraInput").addEventListener("change", handleRequestPhoto);
 document.querySelector("#locationInput").addEventListener("change", syncRequesterToLocation);
 document.querySelector("#locationInput").addEventListener("input", syncRequesterToLocation);
 document.querySelector("#assigneeInput").addEventListener("change", () => {
