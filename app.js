@@ -278,6 +278,8 @@ tickets = [
 
 let activeFilter = "all";
 let assigneeTouched = false;
+let pendingCompletionTicketId = null;
+let pendingCompletionProof = null;
 
 function makeTicket(location, requester, description, priority = "normal", createdShiftHours = 0, status = "new", assigneeOverride = null) {
   const category = detectCategory(description);
@@ -358,6 +360,15 @@ function statusLabel(status) {
   return { new: "Новая", in_progress: "В работе", waiting: "Ожидает", done: "Готово" }[status];
 }
 
+function escapeHtml(value) {
+  return String(value || "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
 function getTicketNotificationPayload(ticket) {
   const engineer = engineers.find((item) => item.id === ticket.assignee);
   return {
@@ -372,6 +383,8 @@ function getTicketNotificationPayload(ticket) {
     statusLabel: statusLabel(ticket.status),
     assigneeName: engineer?.name || "Не назначен",
     dueText: `до ${formatDate(ticket.dueAt)}`,
+    completionProofName: ticket.completionProof?.name || "",
+    completionProofCapturedAt: ticket.completionProof?.capturedAt || "",
   };
 }
 
@@ -544,7 +557,26 @@ function renderTickets() {
         isOverdue(ticket) ? `<span class="tag danger">Просрочено</span>` : "",
         isStale(ticket) ? `<span class="tag warning">Зависла</span>` : "",
         ticket.status === "done" ? `<span class="tag ok">Закрыта</span>` : "",
+        ticket.completionProof ? `<span class="tag ok">Фото подтверждено</span>` : "",
       ].join("");
+      const completionProof = ticket.completionProof
+        ? `
+          <div class="completion-proof">
+            <img src="${ticket.completionProof.dataUrl}" alt="Фото подтверждения ${ticket.id}" />
+            <div>
+              <strong>Подтверждение выполнения</strong>
+              <span>${escapeHtml(ticket.completionProof.name)} · ${formatDate(new Date(ticket.completionProof.capturedAt))}</span>
+            </div>
+          </div>
+        `
+        : "";
+      const actionButtons =
+        ticket.status === "done"
+          ? ""
+          : `
+            <button data-action="progress" data-id="${ticket.id}">В работу</button>
+            <button data-action="done" data-id="${ticket.id}">Закрыть</button>
+          `;
 
       return `
         <article class="ticket">
@@ -559,10 +591,10 @@ function renderTickets() {
               <span class="tag">${engineer.name}</span>
               ${flags}
             </div>
+            ${completionProof}
           </div>
           <div class="ticket-actions ${hasFullAccess() ? "" : "hidden"}">
-            <button data-action="progress" data-id="${ticket.id}">В работу</button>
-            <button data-action="done" data-id="${ticket.id}">Закрыть</button>
+            ${actionButtons}
           </div>
         </article>
       `;
@@ -706,6 +738,73 @@ function seedFlow() {
   renderAll();
 }
 
+function resetCompletionModal() {
+  pendingCompletionProof = null;
+  document.querySelector("#completionConfirm").disabled = true;
+  document.querySelector("#completionPhotoInput").value = "";
+  document.querySelector("#completionCameraInput").value = "";
+  document.querySelector("#completionPreview").innerHTML = `<span>Фото ещё не выбрано</span>`;
+}
+
+function openCompletionModal(ticket) {
+  pendingCompletionTicketId = ticket.id;
+  resetCompletionModal();
+  document.querySelector("#completionTitle").textContent = `Закрыть заявку ${ticket.id}`;
+  document.querySelector("#completionModal").hidden = false;
+}
+
+function closeCompletionModal() {
+  document.querySelector("#completionModal").hidden = true;
+  pendingCompletionTicketId = null;
+  resetCompletionModal();
+}
+
+function handleCompletionPhoto(event) {
+  const file = event.target.files?.[0];
+  if (!file) return;
+
+  if (!file.type.startsWith("image/")) {
+    document.querySelector("#completionPreview").innerHTML = `<span>Нужно выбрать изображение.</span>`;
+    document.querySelector("#completionConfirm").disabled = true;
+    return;
+  }
+
+  if (file.size > 8 * 1024 * 1024) {
+    document.querySelector("#completionPreview").innerHTML = `<span>Фото слишком большое. Максимум 8 МБ.</span>`;
+    document.querySelector("#completionConfirm").disabled = true;
+    return;
+  }
+
+  const reader = new FileReader();
+  reader.onload = () => {
+    pendingCompletionProof = {
+      name: file.name || "Фото выполнения",
+      type: file.type,
+      size: file.size,
+      dataUrl: reader.result,
+      capturedAt: new Date().toISOString(),
+    };
+    document.querySelector("#completionPreview").innerHTML = `
+      <img src="${pendingCompletionProof.dataUrl}" alt="Предпросмотр фото подтверждения" />
+      <span>${escapeHtml(pendingCompletionProof.name)}</span>
+    `;
+    document.querySelector("#completionConfirm").disabled = false;
+  };
+  reader.readAsDataURL(file);
+}
+
+function confirmTicketCompletion() {
+  const ticket = tickets.find((item) => item.id === pendingCompletionTicketId);
+  if (!ticket || !pendingCompletionProof) return;
+
+  ticket.status = "done";
+  ticket.completionProof = pendingCompletionProof;
+  ticket.updatedAt = new Date();
+  sendNotification("ticket_done", ticket);
+  closeCompletionModal();
+  renderAll();
+}
+
 document.addEventListener("input", (event) => {
   if (["descriptionInput", "priorityInput"].includes(event.target.id)) updateDecision();
 });
@@ -754,14 +853,31 @@ document.querySelector("#ticketList").addEventListener("click", (event) => {
 
   if (button.dataset.action === "progress") {
     ticket.status = "in_progress";
+    ticket.updatedAt = new Date();
     sendNotification("ticket_in_progress", ticket);
+    renderAll();
   }
   if (button.dataset.action === "done") {
-    ticket.status = "done";
-    sendNotification("ticket_done", ticket);
+    openCompletionModal(ticket);
   }
-  ticket.updatedAt = new Date();
-  renderAll();
+});
+
+document.querySelector("#libraryButton").addEventListener("click", () => {
+  document.querySelector("#completionPhotoInput").click();
+});
+document.querySelector("#cameraButton").addEventListener("click", () => {
+  document.querySelector("#completionCameraInput").click();
+});
+document.querySelector("#completionPhotoInput").addEventListener("change", handleCompletionPhoto);
+document.querySelector("#completionCameraInput").addEventListener("change", handleCompletionPhoto);
+document.querySelector("#completionConfirm").addEventListener("click", confirmTicketCompletion);
+document.querySelector("#completionCancel").addEventListener("click", closeCompletionModal);
+document.querySelector("#completionBack").addEventListener("click", closeCompletionModal);
+document.querySelector("#completionModal").addEventListener("click", (event) => {
+  if (event.target.id === "completionModal") closeCompletionModal();
+});
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && !document.querySelector("#completionModal").hidden) closeCompletionModal();
 });
 
 populateSelects();
