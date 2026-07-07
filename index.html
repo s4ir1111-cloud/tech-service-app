@@ -3,13 +3,15 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Техническая служба</title>
+    <title>Garden Coffee · Техническая служба</title>
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
     <aside class="sidebar">
       <div class="brand">
-        <span class="brand-mark">ТС</span>
+        <span class="brand-logo-box">
+          <img class="brand-logo" src="./assets/garden-logo.png" alt="Garden Coffee" />
+        </span>
         <div>
           <strong>Техническая служба</strong>
           <small>Garden Coffee</small>
@@ -119,11 +121,11 @@
                 </div>
               </div>
               <div class="photo-actions">
-                <button type="button" id="requestLibraryButton">Выбрать из медиатеки</button>
-                <button type="button" id="requestCameraButton">Сделать фото</button>
+                <label class="photo-choice" id="requestLibraryButton" for="requestPhotoInput" role="button" tabindex="0">Выбрать из медиатеки</label>
+                <label class="photo-choice" id="requestCameraButton" for="requestCameraInput" role="button" tabindex="0">Сделать фото</label>
               </div>
-              <input id="requestPhotoInput" type="file" accept="image/*" hidden />
-              <input id="requestCameraInput" type="file" accept="image/*" capture="environment" hidden />
+              <input class="visually-hidden-file" id="requestPhotoInput" type="file" accept="image/*" />
+              <input class="visually-hidden-file" id="requestCameraInput" type="file" accept="image/*" capture="environment" />
               <div class="photo-preview compact" id="requestPhotoPreview">
                 <span>Фото ещё не выбрано</span>
               </div>
@@ -199,11 +201,11 @@
         </div>
         <p class="modal-copy">Перед закрытием приложите фото результата. На телефоне можно выбрать снимок из медиатеки или открыть камеру.</p>
         <div class="photo-actions">
-          <button type="button" id="libraryButton">Выбрать из медиатеки</button>
-          <button type="button" id="cameraButton">Сделать фото</button>
+          <label class="photo-choice" id="libraryButton" for="completionPhotoInput" role="button" tabindex="0">Выбрать из медиатеки</label>
+          <label class="photo-choice" id="cameraButton" for="completionCameraInput" role="button" tabindex="0">Сделать фото</label>
         </div>
-        <input id="completionPhotoInput" type="file" accept="image/*" hidden />
-        <input id="completionCameraInput" type="file" accept="image/*" capture="environment" hidden />
+        <input class="visually-hidden-file" id="completionPhotoInput" type="file" accept="image/*" />
+        <input class="visually-hidden-file" id="completionCameraInput" type="file" accept="image/*" capture="environment" />
         <div class="photo-preview" id="completionPreview">
           <span>Фото ещё не выбрано</span>
         </div>

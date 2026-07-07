@@ -853,12 +853,6 @@ document.addEventListener("input", (event) => {
 });
 
 document.querySelector("#ticketForm").addEventListener("submit", addTicketFromForm);
-document.querySelector("#requestLibraryButton").addEventListener("click", () => {
-  document.querySelector("#requestPhotoInput").click();
-});
-document.querySelector("#requestCameraButton").addEventListener("click", () => {
-  document.querySelector("#requestCameraInput").click();
-});
 document.querySelector("#requestPhotoInput").addEventListener("change", handleRequestPhoto);
 document.querySelector("#requestCameraInput").addEventListener("change", handleRequestPhoto);
 document.querySelector("#locationInput").addEventListener("change", syncRequesterToLocation);
@@ -913,12 +907,6 @@ document.querySelector("#ticketList").addEventListener("click", (event) => {
   }
 });
 
-document.querySelector("#libraryButton").addEventListener("click", () => {
-  document.querySelector("#completionPhotoInput").click();
-});
-document.querySelector("#cameraButton").addEventListener("click", () => {
-  document.querySelector("#completionCameraInput").click();
-});
 document.querySelector("#completionPhotoInput").addEventListener("change", handleCompletionPhoto);
 document.querySelector("#completionCameraInput").addEventListener("change", handleCompletionPhoto);
 document.querySelector("#completionConfirm").addEventListener("click", confirmTicketCompletion);
