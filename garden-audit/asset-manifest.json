@@ -1,0 +1,15 @@
+{
+  "files": {
+    "main.css": "/tech-service-app/garden-audit/static/css/main.b850be63.css",
+    "main.js": "/tech-service-app/garden-audit/static/js/main.57847d1c.js",
+    "static/js/453.6d3a6e07.chunk.js": "/tech-service-app/garden-audit/static/js/453.6d3a6e07.chunk.js",
+    "index.html": "/tech-service-app/garden-audit/index.html",
+    "main.b850be63.css.map": "/tech-service-app/garden-audit/static/css/main.b850be63.css.map",
+    "main.57847d1c.js.map": "/tech-service-app/garden-audit/static/js/main.57847d1c.js.map",
+    "453.6d3a6e07.chunk.js.map": "/tech-service-app/garden-audit/static/js/453.6d3a6e07.chunk.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.b850be63.css",
+    "static/js/main.57847d1c.js"
+  ]
+}
