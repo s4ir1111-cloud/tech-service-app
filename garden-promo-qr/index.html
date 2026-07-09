@@ -1,0 +1,364 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#061a32">
+    <title>Бесплатный напиток в Garden</title>
+    <style>
+      :root {
+        --bg: #061a32;
+        --bg-soft: #0a2442;
+        --text: #fff7e8;
+        --muted: #d9e4d8;
+        --green: #89e442;
+        --green-dark: #356f1b;
+        --line: rgba(137, 228, 66, 0.42);
+        --fill: rgba(137, 228, 66, 0.08);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html {
+        min-height: 100%;
+        background: var(--bg);
+      }
+
+      body {
+        min-height: 100%;
+        margin: 0;
+        color: var(--text);
+        background:
+          radial-gradient(circle at 18% -8%, rgba(137, 228, 66, 0.16), transparent 34%),
+          linear-gradient(180deg, #061a32 0%, #07172b 62%, #04101f 100%);
+        font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.45;
+      }
+
+      body::before,
+      body::after {
+        position: fixed;
+        z-index: 0;
+        width: 220px;
+        height: 220px;
+        border: 1px solid rgba(137, 228, 66, 0.2);
+        border-radius: 50%;
+        content: "";
+        pointer-events: none;
+      }
+
+      body::before {
+        top: 72px;
+        right: -150px;
+      }
+
+      body::after {
+        bottom: 110px;
+        left: -168px;
+      }
+
+      .page {
+        position: relative;
+        z-index: 1;
+        width: min(100%, 430px);
+        margin: 0 auto;
+        padding: 30px 18px 42px;
+      }
+
+      .hero {
+        min-height: 88svh;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        gap: 24px;
+        text-align: center;
+      }
+
+      .logo-wrap {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        align-self: center;
+        width: min(270px, 78vw);
+        padding: 14px 18px;
+        border: 1px solid rgba(137, 228, 66, 0.36);
+        border-radius: 24px;
+        background: var(--text);
+      }
+
+      .logo {
+        display: block;
+        width: 100%;
+        height: auto;
+      }
+
+      .mark {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        align-self: center;
+        min-height: 34px;
+        padding: 7px 14px;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        color: var(--green);
+        font-size: 13px;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      h1,
+      h2 {
+        margin: 0;
+        letter-spacing: 0;
+        line-height: 1.04;
+      }
+
+      h1 {
+        font-size: clamp(42px, 14vw, 62px);
+        font-weight: 900;
+      }
+
+      h2 {
+        font-size: 28px;
+        font-weight: 850;
+      }
+
+      p {
+        margin: 0;
+      }
+
+      .lead {
+        max-width: 350px;
+        margin: 0 auto;
+        color: var(--muted);
+        font-size: 20px;
+        font-weight: 650;
+      }
+
+      .accent {
+        color: var(--green);
+      }
+
+      .grid {
+        display: grid;
+        gap: 12px;
+      }
+
+      .card {
+        border: 1px solid var(--line);
+        border-radius: 20px;
+        background: linear-gradient(180deg, var(--fill), rgba(10, 36, 66, 0.58));
+        padding: 18px;
+        text-align: left;
+      }
+
+      .card.center {
+        text-align: center;
+      }
+
+      .label {
+        margin-bottom: 7px;
+        color: var(--green);
+        font-size: 12px;
+        font-weight: 850;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .card p,
+      li {
+        color: var(--text);
+        font-size: 17px;
+      }
+
+      .address {
+        display: block;
+        margin-top: 4px;
+        color: var(--muted);
+        font-weight: 700;
+      }
+
+      .section {
+        display: grid;
+        gap: 18px;
+        margin-top: 42px;
+      }
+
+      .button {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        min-height: 58px;
+        padding: 15px 18px;
+        border-radius: 18px;
+        background: var(--green);
+        color: #061a32;
+        font-size: 17px;
+        font-weight: 900;
+        text-align: center;
+        text-decoration: none;
+      }
+
+      .steps,
+      .conditions,
+      .important {
+        display: grid;
+        gap: 10px;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+      }
+
+      .steps {
+        counter-reset: step;
+      }
+
+      .steps li,
+      .conditions li,
+      .important li {
+        position: relative;
+        border: 1px solid rgba(255, 247, 232, 0.09);
+        border-radius: 18px;
+        background: rgba(255, 247, 232, 0.045);
+        padding: 15px 16px 15px 48px;
+      }
+
+      .steps li::before {
+        position: absolute;
+        top: 14px;
+        left: 14px;
+        display: grid;
+        width: 24px;
+        height: 24px;
+        place-items: center;
+        border-radius: 50%;
+        background: var(--green);
+        color: var(--bg);
+        content: counter(step);
+        counter-increment: step;
+        font-size: 13px;
+        font-weight: 900;
+      }
+
+      .conditions li::before,
+      .important li::before {
+        position: absolute;
+        top: 22px;
+        left: 20px;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--green);
+        content: "";
+      }
+
+      .note {
+        color: var(--muted);
+        font-size: 15px;
+      }
+
+      .footer {
+        display: grid;
+        gap: 18px;
+        padding: 30px 0 0;
+      }
+
+      strong {
+        color: var(--text);
+        font-weight: 900;
+      }
+
+      @media (min-width: 520px) {
+        .page {
+          padding-top: 42px;
+          padding-bottom: 56px;
+        }
+
+        .hero {
+          min-height: 760px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <section class="hero" aria-labelledby="main-title">
+        <div class="logo-wrap" aria-label="Garden">
+          <img class="logo" src="garden-logo.png" alt="Garden">
+        </div>
+        <div class="mark">Garden в Новине</div>
+        <div>
+          <h1 id="main-title">Бесплатный напиток в Garden</h1>
+          <p class="lead">Приходи в Garden в Новине и получи напиток в подарок.</p>
+        </div>
+
+        <div class="grid" aria-label="Главные условия акции">
+          <article class="card center">
+            <div class="label">Где</div>
+            <p>Акция действует <strong>только в Новине</strong>:<span class="address">ул. 50 лет Октября, 57В</span></p>
+          </article>
+
+          <article class="card center">
+            <div class="label">Что дают</div>
+            <p>Один напиток в подарок для гостя Garden.</p>
+          </article>
+
+          <article class="card center">
+            <div class="label">Главное условие</div>
+            <p>Один гость может получить один напиток в подарок <strong>один раз в неделю</strong>.</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="section" aria-labelledby="bonus-title">
+        <article class="card">
+          <div class="label">Бонусная карта</div>
+          <p id="bonus-title">Акция работает только при наличии регистрации в <strong>бонусной системе</strong> Garden.</p>
+        </article>
+        <a class="button" href="https://iiko.biz/ru-RU/L/082061?b=Z4BZLZ6FCR">Зарегистрировать бонусную карту</a>
+      </section>
+
+      <section class="section" aria-labelledby="how-title">
+        <h2 id="how-title">Как получить напиток</h2>
+        <ol class="steps">
+          <li>Приходи в кофейню Garden в Новине</li>
+          <li>Покажи подтверждение акции бариста</li>
+          <li>Получи напиток в подарок по условиям акции</li>
+        </ol>
+        <article class="card">
+          <div class="label">Подтверждение</div>
+          <p class="note">Фото баннера, открытая страница с условиями акции, скриншот страницы или другое подтверждение акции.</p>
+        </article>
+      </section>
+
+      <section class="section" aria-labelledby="terms-title">
+        <h2 id="terms-title">Условия акции</h2>
+        <ul class="conditions">
+          <li>Для получения напитка нужно показать подтверждение акции</li>
+          <li>Добавки в напиток не входят в подарок</li>
+          <li>Предложение не действует на напитки на альтернативном молоке</li>
+          <li>Акция не суммируется с другими скидками, промокодами и специальными предложениями</li>
+          <li>Garden оставляет за собой право изменить условия акции</li>
+        </ul>
+      </section>
+
+      <section class="section" aria-labelledby="important-title">
+        <h2 id="important-title">Важно</h2>
+        <ul class="important">
+          <li><strong>Только в Новине</strong>: ул. 50 лет Октября, 57В</li>
+          <li>Нужна регистрация в <strong>бонусной системе</strong> Garden</li>
+          <li>Один напиток — <strong>один раз в неделю</strong></li>
+        </ul>
+      </section>
+
+      <footer class="footer">
+        <a class="button" href="https://iiko.biz/ru-RU/L/082061?b=Z4BZLZ6FCR">Зарегистрировать бонусную карту</a>
+      </footer>
+    </main>
+  </body>
+</html>
