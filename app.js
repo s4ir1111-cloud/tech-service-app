@@ -28,6 +28,7 @@ const employees = [
   { id: 9, name: "Михаил Турченко", department: "Отдел стандартизации и снабжения", email: "misaturcenko32@mail.ru", phone: "" },
   { id: 71, name: "Кристина Анастасова", department: "Отдел франчайзинга и сервиса", email: "office@gardencoffee.ru", phone: "" },
   { id: 72, name: "Анна Алыбина", department: "Отдел франчайзинга и сервиса", email: "a.alybina@gardencoffee.ru", phone: "+7 922 471-11-48" },
+  { id: 73, name: "Гузель Соколова", department: "Администрация", email: "", phone: "" },
   { id: 68, name: "Иван Бережной", department: "Отдел операционной деятельности", email: "top-manager@gardencoffee.ru", phone: "" },
 ];
 
@@ -129,6 +130,22 @@ const users = [
     label: "Кристина Анастасова · франчайзинг и сервис",
     role: "director",
     roleName: "Руководитель сервиса",
+    permissions: "full",
+  },
+  {
+    id: "alybina-admin",
+    name: "Анна Алыбина",
+    label: "Анна Алыбина · администратор",
+    role: "admin",
+    roleName: "Администратор",
+    permissions: "full",
+  },
+  {
+    id: "sokolova-admin",
+    name: "Гузель Соколова",
+    label: "Гузель Соколова · администратор",
+    role: "admin",
+    roleName: "Администратор",
     permissions: "full",
   },
   ...cafeManagers.map((manager) => ({
