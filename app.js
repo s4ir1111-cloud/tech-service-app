@@ -1287,14 +1287,24 @@ document.querySelector("#assigneeInput").addEventListener("input", () => {
   updateDecision();
 });
 function handleRoleChange(event) {
-  currentUser = users.find((user) => user.id === event.target.value) || users[0];
+  const nextUser = users.find((user) => user.id === event.target.value) || users[0];
+  if (nextUser.id === currentUser.id) return;
+
+  const code = window.prompt(`Введите код доступа для пользователя: ${nextUser.name}`);
+  if (code !== nextUser.authCode) {
+    window.alert("Неверный код доступа. Пользователь не изменен.");
+    event.target.value = currentUser.id;
+    return;
+  }
+
+  currentUser = nextUser;
+  localStorage.setItem(storageKeys.session, currentUser.id);
   assigneeTouched = false;
   renderAll();
   document.querySelector("#new-ticket").scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
 document.querySelector("#roleInput").addEventListener("change", handleRoleChange);
-document.querySelector("#roleInput").addEventListener("input", handleRoleChange);
 document.querySelector("#seedButton").addEventListener("click", seedFlow);
 document.querySelector("#quickPipe").addEventListener("click", () => {
   document.querySelector("#descriptionInput").value = "Труба потекла под мойкой, вода быстро набирается на полу";
