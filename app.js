@@ -168,14 +168,14 @@ const users = [
     role: "manager",
     roleName: "Управляющая кофейни",
     permissions: "own",
-    authCode: String(manager.id).replace(/\D/g, "").slice(-4).padStart(4, "0") || "1111",
+    authCode: getAuthCodeForName(manager.name, "1111"),
   })),
   ...departmentManagers.map((manager) => ({
     ...manager,
     label: `${manager.name} · ${manager.location.toLowerCase()}`,
     role: "manager",
     permissions: "own",
-    authCode: "2222",
+    authCode: getAuthCodeForName(manager.name, "2222"),
   })),
   {
     id: "vasilyeva",
@@ -451,6 +451,11 @@ function statusLabel(status) {
 
 function visitLabel(value) {
   return { yes: "Да", no: "Нет", unsure: "Сомневаюсь", true: "Да", false: "Нет" }[String(value)] || "Да";
+}
+
+function getAuthCodeForName(name, fallback) {
+  const employee = employees.find((item) => item.name === name);
+  return employee ? String(employee.id).padStart(4, "0") : fallback;
 }
 
 function escapeHtml(value) {
