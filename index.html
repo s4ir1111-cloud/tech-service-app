@@ -7,6 +7,28 @@
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
+    <div class="auth-screen" id="authScreen">
+      <form class="auth-card" id="loginForm">
+        <span class="brand-logo-box">
+          <img class="brand-logo" src="./assets/garden-logo.png" alt="Garden Coffee" />
+        </span>
+        <div>
+          <p class="eyebrow">Вход</p>
+          <h1>Техническая служба</h1>
+        </div>
+        <label>
+          Пользователь
+          <select id="loginUserInput"></select>
+        </label>
+        <label>
+          Код доступа
+          <input id="loginCodeInput" type="password" inputmode="numeric" autocomplete="current-password" placeholder="Введите код" />
+        </label>
+        <button class="primary" type="submit">Войти</button>
+        <p class="auth-error" id="authError"></p>
+      </form>
+    </div>
+
     <aside class="sidebar">
       <div class="brand">
         <span class="brand-logo-box">
@@ -21,12 +43,16 @@
         <a href="#dashboard" class="active" data-full-only>Пульт</a>
         <a href="#new-ticket">Новая заявка</a>
         <a href="#tickets">Заявки</a>
+        <a href="#archive" data-full-only>Архив</a>
+        <a href="#chat">Чат</a>
+        <a href="#templates" data-full-only>Планы</a>
         <a href="#team" data-full-only>Команда</a>
         <a href="#analytics" data-full-only>Аналитика</a>
       </nav>
       <div class="sidebar-footer">
         <span>Текущая роль</span>
         <strong id="sidebarRole">Инженер</strong>
+        <button class="ghost full" id="logoutButton" type="button">Выйти</button>
       </div>
     </aside>
 
@@ -41,7 +67,7 @@
             Режим
             <select id="roleInput"></select>
           </label>
-          <button class="icon-button" id="seedButton" title="Сгенерировать поток заявок" data-full-only>↻</button>
+          <button class="icon-button" id="seedButton" title="Обновить список заявок" data-full-only>↻</button>
           <button class="primary" id="quickPipe">Труба потекла</button>
         </div>
       </section>
@@ -106,6 +132,7 @@
                 <select id="visitInput">
                   <option value="yes">Да</option>
                   <option value="no">Нет</option>
+                  <option value="unsure">Сомневаюсь</option>
                 </select>
               </label>
               <label>
@@ -153,8 +180,110 @@
               <button data-filter="stale">Зависшие</button>
             </div>
           </div>
+          <div class="ticket-tools">
+            <label>
+              Поиск
+              <input id="ticketSearchInput" type="search" placeholder="Кофейня, человек, текст или номер" />
+            </label>
+            <label data-full-only>
+              Человек
+              <select id="personFilterInput"></select>
+            </label>
+            <label data-full-only>
+              Подрядчик
+              <select id="contractorFilterInput"></select>
+            </label>
+          </div>
           <div class="ticket-list" id="ticketList"></div>
         </section>
+      </section>
+
+      <section class="workspace secondary-workspace">
+        <section id="archive" class="panel" data-full-only>
+          <div class="panel-head">
+            <div>
+              <p class="eyebrow">Хранилище</p>
+              <h2>Архив заявок</h2>
+            </div>
+          </div>
+          <div class="ticket-list" id="archiveList"></div>
+        </section>
+
+        <section id="chat" class="panel">
+          <div class="panel-head">
+            <div>
+              <p class="eyebrow">Коммуникации</p>
+              <h2>Внутренний чат</h2>
+            </div>
+          </div>
+          <div class="chat-list" id="chatList"></div>
+          <form class="chat-form" id="chatForm">
+            <label>
+              Кому
+              <select id="chatRecipientInput">
+                <option value="all">Всем</option>
+              </select>
+            </label>
+            <label class="full">
+              Сообщение
+              <textarea id="chatMessageInput" rows="3" placeholder="Напишите сообщение команде или конкретному сотруднику"></textarea>
+            </label>
+            <button class="primary full" type="submit">Отправить</button>
+          </form>
+        </section>
+      </section>
+
+      <section id="templates" class="panel templates-panel" data-full-only>
+        <div class="panel-head">
+          <div>
+            <p class="eyebrow">Плановые работы</p>
+            <h2>Шаблонные и запланированные задачи</h2>
+          </div>
+        </div>
+        <form id="templateForm" class="ticket-form">
+          <div class="form-row">
+            <label>
+              Шаблон
+              <input id="templateTitleInput" required placeholder="ТО кофемашины" />
+            </label>
+            <label>
+              Локация
+              <select id="templateLocationInput"></select>
+            </label>
+            <label>
+              Периодичность
+              <select id="templateFrequencyInput">
+                <option value="weekly">Еженедельно</option>
+                <option value="monthly" selected>Ежемесячно</option>
+                <option value="quarterly">Ежеквартально</option>
+              </select>
+            </label>
+          </div>
+          <div class="form-row">
+            <label>
+              Следующая дата
+              <input id="templateDateInput" type="date" required />
+            </label>
+            <label>
+              Напомнить инициатору за
+              <select id="templateReminderInput">
+                <option value="1">1 день</option>
+                <option value="3" selected>3 дня</option>
+                <option value="7">7 дней</option>
+              </select>
+            </label>
+            <label>
+              Исполнитель
+              <select id="templateAssigneeInput"></select>
+            </label>
+          </div>
+          <label class="full">
+            Описание
+            <textarea id="templateDescriptionInput" rows="3" placeholder="Проверка, чистка, замена фильтров"></textarea>
+          </label>
+          <button class="primary full" type="submit">Добавить плановую задачу</button>
+        </form>
+        <div class="engineer-list" id="templateList"></div>
       </section>
 
       <section class="lower-grid" data-full-only>
@@ -199,7 +328,21 @@
           </div>
           <button class="icon-button" type="button" id="completionCancel" title="Закрыть">×</button>
         </div>
-        <p class="modal-copy">Перед закрытием приложите фото результата. На телефоне можно выбрать снимок из медиатеки или открыть камеру.</p>
+        <p class="modal-copy">Для закрытия достаточно фото или комментария. Укажите итог выполнения.</p>
+        <div class="form-row">
+          <label>
+            Результат
+            <select id="completionResultInput">
+              <option value="done">Выполнено</option>
+              <option value="not_approved">Не согласовано</option>
+              <option value="deferred">Отложено до...</option>
+            </select>
+          </label>
+          <label>
+            Отложено до
+            <input id="completionDeferredInput" type="date" />
+          </label>
+        </div>
         <div class="photo-actions">
           <label class="photo-choice" id="libraryButton" for="completionPhotoInput" role="button" tabindex="0">Выбрать из медиатеки</label>
           <label class="photo-choice" id="cameraButton" for="completionCameraInput" role="button" tabindex="0">Сделать фото</label>
@@ -209,6 +352,10 @@
         <div class="photo-preview" id="completionPreview">
           <span>Фото ещё не выбрано</span>
         </div>
+        <label>
+          Комментарий
+          <textarea id="completionCommentInput" rows="3" placeholder="Что сделано или почему заявка не закрыта"></textarea>
+        </label>
         <div class="modal-actions">
           <button type="button" id="completionBack">Отмена</button>
           <button class="primary" type="button" id="completionConfirm" disabled>Подтвердить закрытие</button>
@@ -216,6 +363,72 @@
       </div>
     </div>
 
-    <script src="./app.js?v=20260706-2"></script>
+    <div class="modal-backdrop" id="editModal" hidden>
+      <div class="completion-modal" role="dialog" aria-modal="true" aria-labelledby="editTitle">
+        <div class="modal-head">
+          <div>
+            <p class="eyebrow">Редактирование</p>
+            <h2 id="editTitle">Заявка</h2>
+          </div>
+          <button class="icon-button" type="button" id="editCancel" title="Закрыть">×</button>
+        </div>
+        <form id="editForm" class="ticket-form">
+          <div class="form-row">
+            <label>
+              Локация
+              <select id="editLocationInput"></select>
+            </label>
+            <label>
+              Заявитель
+              <select id="editRequesterInput"></select>
+            </label>
+            <label>
+              Исполнитель
+              <select id="editAssigneeInput"></select>
+            </label>
+          </div>
+          <div class="form-row">
+            <label>
+              Приоритет
+              <select id="editPriorityInput">
+                <option value="critical">Авария</option>
+                <option value="high">Высокий</option>
+                <option value="normal">Обычный</option>
+                <option value="low">Низкий</option>
+              </select>
+            </label>
+            <label>
+              Статус
+              <select id="editStatusInput">
+                <option value="new">Новая</option>
+                <option value="in_progress">В работе</option>
+                <option value="waiting">Ожидает</option>
+                <option value="done">Готово</option>
+                <option value="not_approved">Не согласовано</option>
+                <option value="deferred">Отложено</option>
+              </select>
+            </label>
+            <label>
+              Нужен выезд
+              <select id="editVisitInput">
+                <option value="yes">Да</option>
+                <option value="no">Нет</option>
+                <option value="unsure">Сомневаюсь</option>
+              </select>
+            </label>
+          </div>
+          <label class="full">
+            Проблема
+            <textarea id="editDescriptionInput" rows="4"></textarea>
+          </label>
+          <div class="modal-actions full">
+            <button type="button" id="editBack">Отмена</button>
+            <button class="primary" type="submit">Сохранить</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <script src="./app.js?v=20260918-ops"></script>
   </body>
 </html>

@@ -35,6 +35,40 @@ body {
   grid-template-columns: 260px minmax(0, 1fr);
 }
 
+.auth-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background:
+    linear-gradient(135deg, rgba(46, 50, 66, 0.96), rgba(3, 78, 62, 0.94)),
+    var(--bg);
+}
+
+.auth-screen[hidden] {
+  display: none;
+}
+
+.auth-card {
+  width: min(420px, 100%);
+  display: grid;
+  gap: 16px;
+  padding: 24px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: linear-gradient(180deg, rgba(13, 70, 59, 0.98), rgba(8, 51, 43, 0.98));
+  box-shadow: var(--shadow);
+}
+
+.auth-error {
+  min-height: 20px;
+  margin: 0;
+  color: var(--danger);
+  font-weight: 800;
+}
+
 button,
 select,
 textarea,
@@ -196,7 +230,8 @@ h3 {
 }
 
 .primary,
-.icon-button {
+.icon-button,
+.ghost {
   border: 0;
   border-radius: 8px;
   min-height: 42px;
@@ -205,6 +240,15 @@ h3 {
   background: var(--accent);
   font-weight: 800;
   box-shadow: 0 10px 24px rgba(190, 223, 61, 0.2);
+}
+
+.ghost {
+  width: 100%;
+  margin-top: 12px;
+  border: 1px solid rgba(190, 223, 61, 0.22);
+  color: var(--ink);
+  background: rgba(255, 255, 255, 0.06);
+  box-shadow: none;
 }
 
 .primary:hover,
@@ -265,6 +309,11 @@ h3 {
   align-items: start;
 }
 
+.secondary-workspace,
+.templates-panel {
+  margin-top: 18px;
+}
+
 .lower-grid {
   grid-template-columns: minmax(320px, 0.9fr) minmax(0, 1.1fr);
   margin-top: 18px;
@@ -314,7 +363,8 @@ label {
 }
 
 select,
-textarea {
+textarea,
+input {
   width: 100%;
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -395,9 +445,17 @@ textarea {
 }
 
 .ticket-list,
-.engineer-list {
+.engineer-list,
+.chat-list {
   display: grid;
   gap: 10px;
+}
+
+.ticket-tools {
+  display: grid;
+  grid-template-columns: 1.3fr 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 14px;
 }
 
 .ticket {
@@ -455,6 +513,45 @@ textarea {
   display: grid;
   align-content: start;
   gap: 8px;
+}
+
+.text-proof {
+  grid-template-columns: 1fr;
+}
+
+.chat-form {
+  display: grid;
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.chat-message {
+  border: 1px solid rgba(190, 223, 61, 0.18);
+  border-radius: 8px;
+  padding: 12px;
+  background: rgba(2, 45, 37, 0.58);
+}
+
+.chat-message strong,
+.chat-message span {
+  display: block;
+}
+
+.chat-message span {
+  color: var(--muted);
+  font-size: 12px;
+  margin: 4px 0 8px;
+}
+
+.chat-message p,
+.engineer p {
+  color: var(--muted);
+  margin-bottom: 10px;
+}
+
+.empty {
+  margin: 0;
+  color: var(--muted);
 }
 
 .ticket-actions button {
@@ -775,8 +872,10 @@ textarea {
   }
 
   .workspace,
+  .secondary-workspace,
   .lower-grid,
   .metrics,
+  .ticket-tools,
   .analytics-grid {
     grid-template-columns: 1fr;
   }

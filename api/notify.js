@@ -118,7 +118,9 @@ function unique(values) {
 function pickRecipients(event) {
   const ticket = event.ticket || {};
   if (event.type === "ticket_created") {
-    return unique(["Александр Скорняков", "Кристина Анастасова", ticket.assigneeName]);
+    const admins = ["Кристина Анастасова", "Анна Алыбина", "Гузель Соколова"];
+    const urgentAdmins = ["critical", "high"].includes(ticket.priority) ? admins : [];
+    return unique(["Александр Скорняков", ticket.assigneeName, ...urgentAdmins]);
   }
   if (event.type === "ticket_in_progress" || event.type === "ticket_done") {
     return unique([ticket.requester]);
@@ -158,7 +160,9 @@ function formatMessage(event) {
       `Заявка ${ticket.id} закрыта`,
       `Локация: ${ticket.location}`,
       `Ответственный: ${assignee}`,
+      ticket.completionResultLabel ? `Результат: ${ticket.completionResultLabel}` : "",
       `Проблема: ${ticket.description}`,
+      ticket.completionComment ? `Комментарий: ${ticket.completionComment}` : "",
       ticket.completionProofName ? `Фото подтверждения: ${ticket.completionProofName}` : "",
     ].filter(Boolean).join("\n");
   }

@@ -78,11 +78,12 @@ const requesters = [...new Set([
   "Галина Васильева",
   "Александр Бокслер",
   "Иван Бережной",
+  "Заготовочный цех",
 ])];
 
 const locations = [...new Set([
   ...cafeManagers.flatMap((manager) => getUserLocations(manager)), "Гарден Кофе Сургут", "Гарден Кофе Тобольск", "Кондитерский цех", "Обжарочный цех",
-  "Склад снабжения", "Бухгалтерия", "Офис", "Тренинг-центр", "Новая точка"
+  "Заготовочный цех", "Склад снабжения", "Бухгалтерия", "Офис", "Тренинг-центр", "Софиленд", "Новая точка"
 ])];
 
 const defaultRequesterByLocation = cafeManagers.reduce((map, manager) => {
@@ -101,11 +102,19 @@ const defaultRequesterByLocation = cafeManagers.reduce((map, manager) => {
   "Гарден Кофе Тобольск": "Юлия Зуева",
   "Кондитерский цех": "Галина Васильева",
   "Обжарочный цех": "Александр Бокслер",
+  "Заготовочный цех": "Заготовочный цех",
 });
 
 const notificationEndpoint = window.TECH_SERVICE_NOTIFY_ENDPOINT
   || (window.location.hostname.endsWith("vercel.app") ? "/api/notify" : "");
 const notificationClientKey = window.TECH_SERVICE_NOTIFY_KEY || "";
+const storageKeys = {
+  tickets: "garden-tech-service:tickets:v2",
+  archive: "garden-tech-service:archive:v2",
+  chat: "garden-tech-service:chat:v1",
+  templates: "garden-tech-service:templates:v1",
+  session: "garden-tech-service:session:v1",
+};
 
 const users = [
   {
@@ -115,6 +124,7 @@ const users = [
     role: "engineer",
     roleName: "Инженер технической службы",
     permissions: "full",
+    authCode: "1400",
   },
   {
     id: "berezhnoy",
@@ -123,6 +133,7 @@ const users = [
     role: "director",
     roleName: "Операционный руководитель",
     permissions: "full",
+    authCode: "6800",
   },
   {
     id: "cafe-director",
@@ -131,6 +142,7 @@ const users = [
     role: "director",
     roleName: "Руководитель сервиса",
     permissions: "full",
+    authCode: "7100",
   },
   {
     id: "alybina-admin",
@@ -139,6 +151,7 @@ const users = [
     role: "admin",
     roleName: "Администратор",
     permissions: "full",
+    authCode: "7200",
   },
   {
     id: "sokolova-admin",
@@ -147,6 +160,7 @@ const users = [
     role: "admin",
     roleName: "Администратор",
     permissions: "full",
+    authCode: "7300",
   },
   ...cafeManagers.map((manager) => ({
     ...manager,
@@ -154,12 +168,14 @@ const users = [
     role: "manager",
     roleName: "Управляющая кофейни",
     permissions: "own",
+    authCode: String(manager.id).replace(/\D/g, "").slice(-4).padStart(4, "0") || "1111",
   })),
   ...departmentManagers.map((manager) => ({
     ...manager,
     label: `${manager.name} · ${manager.location.toLowerCase()}`,
     role: "manager",
     permissions: "own",
+    authCode: "2222",
   })),
   {
     id: "vasilyeva",
@@ -169,6 +185,7 @@ const users = [
     roleName: "Ответственная за цех",
     permissions: "own",
     location: "Кондитерский цех",
+    authCode: "3333",
   },
   {
     id: "boksler",
@@ -178,6 +195,7 @@ const users = [
     roleName: "Ответственный за цех",
     permissions: "own",
     location: "Обжарочный цех",
+    authCode: "4444",
   },
 ];
 
@@ -232,7 +250,18 @@ const engineers = [
   },
 ];
 
-let currentUser = users[0];
+users.push(...engineers.map((engineer) => ({
+  id: `contractor-${engineer.id}`,
+  name: engineer.name,
+  label: `${engineer.name} · подрядчик`,
+  role: "contractor",
+  roleName: "Подрядчик",
+  permissions: "assigned",
+  assignee: engineer.id,
+  authCode: String(engineer.employeeId).padStart(4, "0"),
+})));
+
+let currentUser = users.find((user) => user.id === localStorage.getItem(storageKeys.session)) || users[0];
 
 const categories = {
   plumbing: {
@@ -282,22 +311,18 @@ const categories = {
   },
 };
 
-let tickets = [];
-
-tickets = [
-  makeTicket("Видный", "Ксения Степанова", "Труба потекла под барной мойкой, вода уходит на пол", "critical", -6, "in_progress"),
-  makeTicket("Кондитерский цех", "Екатерина Пушкарева", "Печь периодически выключается, нужна диагностика оборудования", "high", -10, "new"),
-  makeTicket("Обжарочный цех", "Александр Бокслер", "Нужен фильтр и плановая закупка расходников для кофемашины", "normal", -42, "waiting"),
-  makeTicket("Гарден Кофе Сургут", "Юлия Зуева", "В холодильной витрине растет температура", "critical", -2, "in_progress"),
-  makeTicket("Офис", "Иван Бережной", "В переговорной не работает свет и выбивает автомат", "high", -26, "in_progress"),
-  makeTicket("Новая точка", "Анна Алыбина", "Подрядчику нужен доступ для ремонта двери", "normal", -31, "waiting"),
-];
-
+let tickets = reviveTickets(loadStored(storageKeys.tickets, []));
+let archivedTickets = reviveTickets(loadStored(storageKeys.archive, []));
+let chatMessages = reviveStoredDates(loadStored(storageKeys.chat, []), ["createdAt"]);
+let templates = reviveStoredDates(loadStored(storageKeys.templates, []), ["nextDate", "createdAt"]);
 let activeFilter = "all";
+let personFilter = "all";
+let contractorFilter = "all";
 let assigneeTouched = false;
 let requestPhotoProof = null;
 let pendingCompletionTicketId = null;
 let pendingCompletionProof = null;
+let pendingEditTicketId = null;
 
 function makeTicket(location, requester, description, priority = "normal", createdShiftHours = 0, status = "new", assigneeOverride = null) {
   const category = detectCategory(description);
@@ -318,8 +343,46 @@ function makeTicket(location, requester, description, priority = "normal", creat
     createdAt,
     updatedAt,
     dueAt,
-    visitRequired: true,
+    visitRequired: "yes",
+    deletedAt: null,
+    completionResult: "",
+    completionComment: "",
+    deferredUntil: "",
   };
+}
+
+function loadStored(key, fallback) {
+  try {
+    const value = JSON.parse(localStorage.getItem(key) || "null");
+    return value ?? fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function saveStored(key, value) {
+  localStorage.setItem(key, JSON.stringify(value));
+}
+
+function reviveStoredDates(items, fields) {
+  return items.map((item) => {
+    const next = { ...item };
+    fields.forEach((field) => {
+      if (next[field]) next[field] = new Date(next[field]);
+    });
+    return next;
+  });
+}
+
+function reviveTickets(items) {
+  return reviveStoredDates(items, ["createdAt", "updatedAt", "dueAt", "deletedAt"]);
+}
+
+function persistState() {
+  saveStored(storageKeys.tickets, tickets);
+  saveStored(storageKeys.archive, archivedTickets);
+  saveStored(storageKeys.chat, chatMessages);
+  saveStored(storageKeys.templates, templates);
 }
 
 function addHours(date, hours) {
@@ -342,7 +405,7 @@ function detectCategory(text) {
 
 function currentLoad(engineerId, draftCategory = null, priority = "normal") {
   const priorityWeight = { critical: 2.2, high: 1.6, normal: 1, low: 0.6 };
-  const active = tickets.filter((ticket) => ticket.assignee === engineerId && !["done", "cancelled"].includes(ticket.status));
+  const active = tickets.filter((ticket) => ticket.assignee === engineerId && !isClosedStatus(ticket.status));
   const ticketLoad = active.reduce((sum, ticket) => sum + priorityWeight[ticket.priority], 0);
   const draftLoad = draftCategory ? priorityWeight[priority] : 0;
   return ticketLoad + draftLoad;
@@ -375,7 +438,19 @@ function priorityLabel(priority) {
 }
 
 function statusLabel(status) {
-  return { new: "Новая", in_progress: "В работе", waiting: "Ожидает", done: "Готово" }[status];
+  return {
+    new: "Новая",
+    in_progress: "В работе",
+    waiting: "Ожидает",
+    done: "Выполнено",
+    not_approved: "Не согласовано",
+    deferred: "Отложено",
+    archived: "Архив",
+  }[status] || status;
+}
+
+function visitLabel(value) {
+  return { yes: "Да", no: "Нет", unsure: "Сомневаюсь", true: "Да", false: "Нет" }[String(value)] || "Да";
 }
 
 function escapeHtml(value) {
@@ -405,6 +480,10 @@ function getTicketNotificationPayload(ticket) {
     requestPhotoCapturedAt: ticket.requestPhoto?.capturedAt || "",
     completionProofName: ticket.completionProof?.name || "",
     completionProofCapturedAt: ticket.completionProof?.capturedAt || "",
+    completionResult: ticket.completionResult || "",
+    completionResultLabel: statusLabel(ticket.completionResult || ticket.status),
+    completionComment: ticket.completionComment || "",
+    deferredUntil: ticket.deferredUntil || "",
   };
 }
 
@@ -444,6 +523,10 @@ function hasFullAccess() {
   return currentUser.permissions === "full";
 }
 
+function isAdmin() {
+  return hasFullAccess();
+}
+
 function getUserLocations(user) {
   if (user.locations) return user.locations;
   return user.location ? [user.location] : [];
@@ -454,6 +537,7 @@ function getPreferredLocation(user) {
 }
 
 function isOwnTicket(ticket) {
+  if (currentUser.permissions === "assigned") return ticket.assignee === currentUser.assignee;
   return ticket.requester === currentUser.name || getUserLocations(currentUser).includes(ticket.location);
 }
 
@@ -461,11 +545,30 @@ function getVisibleTickets() {
   return hasFullAccess() ? tickets : tickets.filter(isOwnTicket);
 }
 
+function getVisibleArchive() {
+  return hasFullAccess() ? archivedTickets : archivedTickets.filter(isOwnTicket);
+}
+
+function isClosedStatus(status) {
+  return ["done", "not_approved"].includes(status);
+}
+
 function populateSelects() {
+  document.querySelector("#loginUserInput").innerHTML = users.map((user) => `<option value="${user.id}">${user.label}</option>`).join("");
   document.querySelector("#roleInput").innerHTML = users.map((user) => `<option value="${user.id}">${user.label}</option>`).join("");
   document.querySelector("#assigneeInput").innerHTML = engineers
     .map((engineer) => `<option value="${engineer.id}">${engineer.name} · ${engineer.role}</option>`)
     .join("");
+  document.querySelector("#templateAssigneeInput").innerHTML = document.querySelector("#assigneeInput").innerHTML;
+  document.querySelector("#templateLocationInput").innerHTML = locations.map((location) => `<option>${location}</option>`).join("");
+  ["#editLocationInput"].forEach((selector) => {
+    document.querySelector(selector).innerHTML = locations.map((location) => `<option>${location}</option>`).join("");
+  });
+  document.querySelector("#editRequesterInput").innerHTML = requesters.map((name) => `<option>${name}</option>`).join("");
+  document.querySelector("#editAssigneeInput").innerHTML = document.querySelector("#assigneeInput").innerHTML;
+  document.querySelector("#personFilterInput").innerHTML = `<option value="all">Все</option>${users.map((user) => `<option value="${user.name}">${user.name}</option>`).join("")}`;
+  document.querySelector("#contractorFilterInput").innerHTML = `<option value="all">Все</option>${engineers.map((engineer) => `<option value="${engineer.id}">${engineer.name}</option>`).join("")}`;
+  document.querySelector("#chatRecipientInput").innerHTML = `<option value="all">Всем</option>${users.map((user) => `<option value="${user.id}">${user.label}</option>`).join("")}`;
   updateRequestScope();
 }
 
@@ -562,10 +665,27 @@ function renderMetrics() {
 function renderTickets() {
   const list = document.querySelector("#ticketList");
   const visible = getVisibleTickets().filter((ticket) => {
+    const query = document.querySelector("#ticketSearchInput").value.trim().toLowerCase();
     if (activeFilter === "new") return ticket.status === "new";
     if (activeFilter === "in_progress") return ticket.status === "in_progress";
     if (activeFilter === "overdue") return isOverdue(ticket);
     if (activeFilter === "stale") return isStale(ticket);
+    return true;
+  }).filter((ticket) => {
+    const query = document.querySelector("#ticketSearchInput").value.trim().toLowerCase();
+    const engineer = engineers.find((item) => item.id === ticket.assignee);
+    const haystack = [
+      ticket.id,
+      ticket.location,
+      ticket.requester,
+      ticket.description,
+      engineer?.name,
+      categories[ticket.category]?.label,
+      formatDate(ticket.createdAt),
+    ].join(" ").toLowerCase();
+    if (query && !haystack.includes(query)) return false;
+    if (personFilter !== "all" && ticket.requester !== personFilter && engineer?.name !== personFilter) return false;
+    if (contractorFilter !== "all" && ticket.assignee !== contractorFilter) return false;
     return true;
   });
 
@@ -577,7 +697,8 @@ function renderTickets() {
         isOverdue(ticket) ? `<span class="tag danger">Просрочено</span>` : "",
         isStale(ticket) ? `<span class="tag warning">Зависла</span>` : "",
         ticket.requestPhoto ? `<span class="tag">Фото проблемы</span>` : "",
-        ticket.status === "done" ? `<span class="tag ok">Закрыта</span>` : "",
+        isClosedStatus(ticket.status) ? `<span class="tag ok">Закрыта</span>` : "",
+        ticket.status === "deferred" ? `<span class="tag warning">Отложена</span>` : "",
         ticket.completionProof ? `<span class="tag ok">Фото подтверждено</span>` : "",
       ].join("");
       const requestPhoto = ticket.requestPhoto
@@ -602,13 +723,30 @@ function renderTickets() {
           </div>
         `
         : "";
+      const completionNote = ticket.completionComment || ticket.completionResult
+        ? `
+          <div class="completion-proof text-proof">
+            <div>
+              <strong>Результат: ${statusLabel(ticket.completionResult || ticket.status)}</strong>
+              <span>${escapeHtml(ticket.completionComment || "Комментарий не указан")}${ticket.deferredUntil ? ` · до ${formatDate(new Date(ticket.deferredUntil))}` : ""}</span>
+            </div>
+          </div>
+        `
+        : "";
       const actionButtons =
-        ticket.status === "done"
+        isClosedStatus(ticket.status)
           ? ""
           : `
             <button data-action="progress" data-id="${ticket.id}">В работу</button>
             <button data-action="done" data-id="${ticket.id}">Закрыть</button>
           `;
+      const adminButtons = isAdmin()
+        ? `
+          <button data-action="edit" data-id="${ticket.id}">Редактировать</button>
+          <button data-action="archive" data-id="${ticket.id}">В архив</button>
+          <button data-action="delete" data-id="${ticket.id}">Удалить</button>
+        `
+        : "";
 
       return `
         <article class="ticket">
@@ -616,18 +754,22 @@ function renderTickets() {
             <strong>${ticket.id} · ${categories[ticket.category].label}</strong>
             <p>${ticket.description}</p>
             <div class="tags">
-              <span class="tag">${ticket.location}</span>
+              <span class="tag">Кофейня: ${ticket.location}</span>
+              <span class="tag">Дата: ${formatDate(ticket.createdAt)}</span>
               <span class="tag">${priorityLabel(ticket.priority)}</span>
               <span class="tag">${statusLabel(ticket.status)}</span>
+              <span class="tag">Выезд: ${visitLabel(ticket.visitRequired)}</span>
               <span class="tag">до ${formatDate(ticket.dueAt)}</span>
-              <span class="tag">${engineer.name}</span>
+              <span class="tag">${engineer?.name || "Не назначен"}</span>
               ${flags}
             </div>
             ${requestPhoto}
             ${completionProof}
+            ${completionNote}
           </div>
           <div class="ticket-actions ${hasFullAccess() ? "" : "hidden"}">
             ${actionButtons}
+            ${adminButtons}
           </div>
         </article>
       `;
@@ -656,6 +798,90 @@ function renderEngineers() {
       `;
     })
     .join("");
+}
+
+function renderArchive() {
+  const list = document.querySelector("#archiveList");
+  const visible = getVisibleArchive();
+  list.innerHTML = visible
+    .sort((a, b) => new Date(b.deletedAt || b.updatedAt) - new Date(a.deletedAt || a.updatedAt))
+    .map((ticket) => {
+      const engineer = engineers.find((item) => item.id === ticket.assignee);
+      return `
+        <article class="ticket">
+          <div>
+            <strong>${ticket.id} · ${categories[ticket.category]?.label || "Заявка"}</strong>
+            <p>${ticket.description}</p>
+            <div class="tags">
+              <span class="tag">Кофейня: ${ticket.location}</span>
+              <span class="tag">Дата: ${formatDate(ticket.createdAt)}</span>
+              <span class="tag">${statusLabel(ticket.status)}</span>
+              <span class="tag">${engineer?.name || "Не назначен"}</span>
+              <span class="tag warning">Архив: ${ticket.deletedAt ? formatDate(ticket.deletedAt) : "без даты"}</span>
+            </div>
+          </div>
+          <div class="ticket-actions ${isAdmin() ? "" : "hidden"}">
+            <button data-archive-action="restore" data-id="${ticket.id}">Восстановить</button>
+          </div>
+        </article>
+      `;
+    })
+    .join("") || `<p class="empty">В архиве пока нет заявок.</p>`;
+}
+
+function renderChat() {
+  const list = document.querySelector("#chatList");
+  const visible = chatMessages.filter((message) => {
+    if (hasFullAccess()) return true;
+    return message.to === "all" || message.to === currentUser.id || message.fromId === currentUser.id;
+  });
+
+  list.innerHTML = visible
+    .slice(-40)
+    .map((message) => `
+      <article class="chat-message">
+        <strong>${escapeHtml(message.fromName)} → ${message.to === "all" ? "всем" : escapeHtml(users.find((user) => user.id === message.to)?.name || "адресат")}</strong>
+        <span>${formatDate(message.createdAt)}</span>
+        <p>${escapeHtml(message.text)}</p>
+      </article>
+    `)
+    .join("") || `<p class="empty">Сообщений пока нет.</p>`;
+}
+
+function renderTemplates() {
+  const list = document.querySelector("#templateList");
+  list.innerHTML = templates
+    .sort((a, b) => new Date(a.nextDate) - new Date(b.nextDate))
+    .map((template) => {
+      const engineer = engineers.find((item) => item.id === template.assignee);
+      const reminderAt = addHours(new Date(template.nextDate), -24 * Number(template.reminderDays || 3));
+      const reminderSoon = reminderAt <= new Date();
+      return `
+        <article class="engineer">
+          <div class="engineer-top">
+            <div>
+              <strong>${escapeHtml(template.title)}</strong>
+              <small>${escapeHtml(template.location)} · ${frequencyLabel(template.frequency)}</small>
+            </div>
+            <strong>${formatDate(template.nextDate)}</strong>
+          </div>
+          <p>${escapeHtml(template.description || "Описание не указано")}</p>
+          <div class="tags">
+            <span class="tag">${engineer?.name || "Исполнитель не назначен"}</span>
+            <span class="tag ${reminderSoon ? "warning" : ""}">Напоминание за ${template.reminderDays} дн.</span>
+          </div>
+          <div class="ticket-actions">
+            <button data-template-action="create" data-id="${template.id}">Создать заявку</button>
+            <button data-template-action="delete" data-id="${template.id}">Удалить</button>
+          </div>
+        </article>
+      `;
+    })
+    .join("") || `<p class="empty">Плановых задач пока нет.</p>`;
+}
+
+function frequencyLabel(value) {
+  return { weekly: "еженедельно", monthly: "ежемесячно", quarterly: "ежеквартально" }[value] || value;
 }
 
 function renderAnalytics() {
@@ -701,6 +927,9 @@ function renderAll() {
   applyRoleInterface();
   renderMetrics();
   renderTickets();
+  renderArchive();
+  renderChat();
+  renderTemplates();
   renderEngineers();
   renderAnalytics();
   updateDecision();
@@ -710,18 +939,25 @@ function applyRoleInterface() {
   const fullAccess = hasFullAccess();
   document.body.dataset.role = currentUser.role;
   document.querySelector("#roleInput").value = currentUser.id;
+  document.querySelector(".role-switch").classList.toggle("hidden", !fullAccess);
   document.querySelector("#sidebarRole").textContent = currentUser.roleName;
   document.querySelector("#pageTitle").textContent = fullAccess
     ? "Автоматическое распределение заявок"
+    : currentUser.permissions === "assigned"
+      ? "Мои назначенные заявки"
     : "Заявки вашей кофейни";
   document.querySelector("#roleEyebrow").textContent = fullAccess
     ? "Оперативный контроль"
+    : currentUser.permissions === "assigned"
+      ? "Рабочее место подрядчика"
     : currentUser.location || "Рабочее место";
   document.querySelector("#requestTitle").textContent = fullAccess
     ? "Опишите проблему"
     : "Новая заявка в техслужбу";
   document.querySelector("#ticketsTitle").textContent = fullAccess
     ? "Заявки в работе"
+    : currentUser.permissions === "assigned"
+      ? "Мои задачи"
     : "Мои заявки и статусы";
 
   document.querySelectorAll("[data-full-only]").forEach((element) => {
@@ -736,6 +972,32 @@ function applyRoleInterface() {
       button.classList.toggle("active", button.dataset.filter === "all");
     });
   }
+}
+
+function showAuthIfNeeded() {
+  document.querySelector("#authScreen").hidden = Boolean(localStorage.getItem(storageKeys.session));
+}
+
+function login(event) {
+  event.preventDefault();
+  const user = users.find((item) => item.id === document.querySelector("#loginUserInput").value);
+  const code = document.querySelector("#loginCodeInput").value.trim();
+  if (!user || code !== user.authCode) {
+    document.querySelector("#authError").textContent = "Неверный код доступа.";
+    return;
+  }
+
+  currentUser = user;
+  localStorage.setItem(storageKeys.session, user.id);
+  document.querySelector("#authError").textContent = "";
+  document.querySelector("#authScreen").hidden = true;
+  renderAll();
+}
+
+function logout() {
+  localStorage.removeItem(storageKeys.session);
+  document.querySelector("#loginCodeInput").value = "";
+  document.querySelector("#authScreen").hidden = false;
 }
 
 function readPhotoFile(file, previewSelector, onReady) {
@@ -792,7 +1054,7 @@ function addTicketFromForm(event) {
   const requester = hasFullAccess() ? document.querySelector("#requesterInput").value : currentUser.name;
   const description = document.querySelector("#descriptionInput").value.trim();
   const priority = document.querySelector("#priorityInput").value;
-  const visitRequired = document.querySelector("#visitInput").value === "yes";
+  const visitRequired = document.querySelector("#visitInput").value;
   const assignee = document.querySelector("#assigneeInput").value;
 
   if (!description) return;
@@ -805,6 +1067,7 @@ function addTicketFromForm(event) {
   ticket.visitRequired = visitRequired;
   ticket.requestPhoto = requestPhotoProof;
   tickets = [ticket, ...tickets];
+  persistState();
   sendNotification("ticket_created", ticket);
   event.target.reset();
   assigneeTouched = false;
@@ -814,14 +1077,8 @@ function addTicketFromForm(event) {
 }
 
 function seedFlow() {
-  const samples = [
-    ["Видный", "Дарья Ярунова", "Засорилась канализация, вода плохо уходит", "high"],
-    ["Кондитерский цех", "Галина Васильева", "Нужно согласовать закупку запчастей для печи", "normal"],
-    ["Офис", "Иван Бережной", "Кондиционер шумит и не охлаждает переговорную", "normal"],
-    ["Обжарочный цех", "Александр Бокслер", "Не включается кофемолка после скачка электричества", "critical"],
-  ];
-  const sample = samples[Math.floor(Math.random() * samples.length)];
-  tickets = [makeTicket(...sample), ...tickets];
+  tickets = reviveTickets(loadStored(storageKeys.tickets, []));
+  archivedTickets = reviveTickets(loadStored(storageKeys.archive, []));
   renderAll();
 }
 
@@ -830,12 +1087,16 @@ function resetCompletionModal() {
   document.querySelector("#completionConfirm").disabled = true;
   document.querySelector("#completionPhotoInput").value = "";
   document.querySelector("#completionCameraInput").value = "";
+  document.querySelector("#completionCommentInput").value = "";
+  document.querySelector("#completionResultInput").value = "done";
+  document.querySelector("#completionDeferredInput").value = "";
   document.querySelector("#completionPreview").innerHTML = `<span>Фото ещё не выбрано</span>`;
 }
 
 function openCompletionModal(ticket) {
   pendingCompletionTicketId = ticket.id;
   resetCompletionModal();
+  updateCompletionState();
   document.querySelector("#completionTitle").textContent = `Закрыть заявку ${ticket.id}`;
   document.querySelector("#completionModal").hidden = false;
 }
@@ -849,26 +1110,164 @@ function closeCompletionModal() {
 function handleCompletionPhoto(event) {
   readPhotoFile(event.target.files?.[0], "#completionPreview", (proof) => {
     pendingCompletionProof = proof;
-    document.querySelector("#completionConfirm").disabled = !pendingCompletionProof;
+    updateCompletionState();
   });
+}
+
+function updateCompletionState() {
+  const comment = document.querySelector("#completionCommentInput").value.trim();
+  const result = document.querySelector("#completionResultInput").value;
+  const deferredUntil = document.querySelector("#completionDeferredInput").value;
+  document.querySelector("#completionDeferredInput").disabled = result !== "deferred";
+  document.querySelector("#completionConfirm").disabled = !(pendingCompletionProof || comment) || (result === "deferred" && !deferredUntil);
 }
 
 function confirmTicketCompletion() {
   const ticket = tickets.find((item) => item.id === pendingCompletionTicketId);
-  if (!ticket || !pendingCompletionProof) return;
+  if (!ticket) return;
+  const comment = document.querySelector("#completionCommentInput").value.trim();
+  const result = document.querySelector("#completionResultInput").value;
+  const deferredUntil = document.querySelector("#completionDeferredInput").value;
+  if (!(pendingCompletionProof || comment)) return;
+  if (result === "deferred" && !deferredUntil) return;
 
-  ticket.status = "done";
+  ticket.status = result === "done" ? "done" : result;
+  ticket.completionResult = result;
   ticket.completionProof = pendingCompletionProof;
+  ticket.completionComment = comment;
+  ticket.deferredUntil = result === "deferred" ? deferredUntil : "";
   ticket.updatedAt = new Date();
+  if (result === "deferred") {
+    ticket.dueAt = new Date(deferredUntil);
+  }
+  persistState();
   sendNotification("ticket_done", ticket);
   closeCompletionModal();
   renderAll();
+}
+
+function archiveTicket(ticket, reason = "archived") {
+  tickets = tickets.filter((item) => item.id !== ticket.id);
+  archivedTickets = [{ ...ticket, archiveReason: reason, deletedAt: new Date(), status: ticket.status || "archived" }, ...archivedTickets];
+  persistState();
+}
+
+function restoreTicket(ticketId) {
+  const ticket = archivedTickets.find((item) => item.id === ticketId);
+  if (!ticket) return;
+  archivedTickets = archivedTickets.filter((item) => item.id !== ticketId);
+  const restored = { ...ticket, deletedAt: null, archiveReason: "", status: ticket.status === "archived" ? "new" : ticket.status };
+  tickets = [restored, ...tickets];
+  persistState();
+  renderAll();
+}
+
+function openEditModal(ticket) {
+  pendingEditTicketId = ticket.id;
+  document.querySelector("#editTitle").textContent = `Редактировать ${ticket.id}`;
+  document.querySelector("#editLocationInput").value = ticket.location;
+  document.querySelector("#editRequesterInput").value = ticket.requester;
+  document.querySelector("#editAssigneeInput").value = ticket.assignee;
+  document.querySelector("#editPriorityInput").value = ticket.priority;
+  document.querySelector("#editStatusInput").value = ticket.status;
+  document.querySelector("#editVisitInput").value = String(ticket.visitRequired || "yes");
+  document.querySelector("#editDescriptionInput").value = ticket.description;
+  document.querySelector("#editModal").hidden = false;
+}
+
+function closeEditModal() {
+  pendingEditTicketId = null;
+  document.querySelector("#editModal").hidden = true;
+}
+
+function saveEditedTicket(event) {
+  event.preventDefault();
+  const ticket = tickets.find((item) => item.id === pendingEditTicketId);
+  if (!ticket) return;
+  ticket.location = document.querySelector("#editLocationInput").value;
+  ticket.requester = document.querySelector("#editRequesterInput").value;
+  ticket.assignee = document.querySelector("#editAssigneeInput").value;
+  ticket.priority = document.querySelector("#editPriorityInput").value;
+  ticket.status = document.querySelector("#editStatusInput").value;
+  ticket.visitRequired = document.querySelector("#editVisitInput").value;
+  ticket.description = document.querySelector("#editDescriptionInput").value.trim();
+  ticket.category = detectCategory(ticket.description);
+  ticket.updatedAt = new Date();
+  persistState();
+  closeEditModal();
+  renderAll();
+}
+
+function addChatMessage(event) {
+  event.preventDefault();
+  const text = document.querySelector("#chatMessageInput").value.trim();
+  const to = document.querySelector("#chatRecipientInput").value;
+  if (!text) return;
+  chatMessages = [...chatMessages, {
+    id: `MSG-${Date.now()}`,
+    fromId: currentUser.id,
+    fromName: currentUser.name,
+    to,
+    text,
+    createdAt: new Date(),
+  }];
+  document.querySelector("#chatMessageInput").value = "";
+  persistState();
+  renderChat();
+}
+
+function addTemplate(event) {
+  event.preventDefault();
+  const template = {
+    id: `TPL-${Date.now()}`,
+    title: document.querySelector("#templateTitleInput").value.trim(),
+    location: document.querySelector("#templateLocationInput").value,
+    frequency: document.querySelector("#templateFrequencyInput").value,
+    nextDate: new Date(document.querySelector("#templateDateInput").value),
+    reminderDays: document.querySelector("#templateReminderInput").value,
+    assignee: document.querySelector("#templateAssigneeInput").value,
+    description: document.querySelector("#templateDescriptionInput").value.trim(),
+    createdAt: new Date(),
+  };
+  if (!template.title || Number.isNaN(template.nextDate.getTime())) return;
+  templates = [template, ...templates];
+  event.target.reset();
+  setDefaultTemplateDate();
+  persistState();
+  renderTemplates();
+}
+
+function createTicketFromTemplate(template) {
+  const description = `${template.title}. ${template.description || "Плановая задача"}`.trim();
+  const ticket = makeTicket(template.location, currentUser.name, description, "normal", 0, "new", template.assignee);
+  ticket.visitRequired = "yes";
+  tickets = [ticket, ...tickets];
+  template.nextDate = getNextTemplateDate(template.nextDate, template.frequency);
+  persistState();
+  sendNotification("ticket_created", ticket);
+  renderAll();
+}
+
+function getNextTemplateDate(date, frequency) {
+  const next = new Date(date);
+  if (frequency === "weekly") next.setDate(next.getDate() + 7);
+  if (frequency === "monthly") next.setMonth(next.getMonth() + 1);
+  if (frequency === "quarterly") next.setMonth(next.getMonth() + 3);
+  return next;
+}
+
+function setDefaultTemplateDate() {
+  const next = new Date();
+  next.setDate(next.getDate() + 7);
+  document.querySelector("#templateDateInput").value = next.toISOString().slice(0, 10);
 }
 
 document.addEventListener("input", (event) => {
   if (["descriptionInput", "priorityInput"].includes(event.target.id)) updateDecision();
 });
 
+document.querySelector("#loginForm").addEventListener("submit", login);
+document.querySelector("#logoutButton").addEventListener("click", logout);
 document.querySelector("#ticketForm").addEventListener("submit", addTicketFromForm);
 document.querySelector("#requestPhotoInput").addEventListener("change", handleRequestPhoto);
 document.querySelector("#requestCameraInput").addEventListener("change", handleRequestPhoto);
@@ -906,6 +1305,15 @@ document.querySelector(".segmented").addEventListener("click", (event) => {
   document.querySelectorAll(".segmented button").forEach((button) => button.classList.toggle("active", button === event.target));
   renderTickets();
 });
+document.querySelector("#ticketSearchInput").addEventListener("input", renderTickets);
+document.querySelector("#personFilterInput").addEventListener("change", (event) => {
+  personFilter = event.target.value;
+  renderTickets();
+});
+document.querySelector("#contractorFilterInput").addEventListener("change", (event) => {
+  contractorFilter = event.target.value;
+  renderTickets();
+});
 
 document.querySelector("#ticketList").addEventListener("click", (event) => {
   const button = event.target.closest("button");
@@ -916,25 +1324,67 @@ document.querySelector("#ticketList").addEventListener("click", (event) => {
   if (button.dataset.action === "progress") {
     ticket.status = "in_progress";
     ticket.updatedAt = new Date();
+    persistState();
     sendNotification("ticket_in_progress", ticket);
     renderAll();
   }
   if (button.dataset.action === "done") {
     openCompletionModal(ticket);
   }
+  if (button.dataset.action === "edit" && isAdmin()) {
+    openEditModal(ticket);
+  }
+  if (button.dataset.action === "archive" && isAdmin()) {
+    archiveTicket(ticket, "archived");
+    renderAll();
+  }
+  if (button.dataset.action === "delete" && isAdmin()) {
+    archiveTicket(ticket, "deleted");
+    renderAll();
+  }
 });
 
 document.querySelector("#completionPhotoInput").addEventListener("change", handleCompletionPhoto);
 document.querySelector("#completionCameraInput").addEventListener("change", handleCompletionPhoto);
+document.querySelector("#completionCommentInput").addEventListener("input", updateCompletionState);
+document.querySelector("#completionResultInput").addEventListener("change", updateCompletionState);
+document.querySelector("#completionDeferredInput").addEventListener("input", updateCompletionState);
 document.querySelector("#completionConfirm").addEventListener("click", confirmTicketCompletion);
 document.querySelector("#completionCancel").addEventListener("click", closeCompletionModal);
 document.querySelector("#completionBack").addEventListener("click", closeCompletionModal);
 document.querySelector("#completionModal").addEventListener("click", (event) => {
   if (event.target.id === "completionModal") closeCompletionModal();
 });
+document.querySelector("#editForm").addEventListener("submit", saveEditedTicket);
+document.querySelector("#editCancel").addEventListener("click", closeEditModal);
+document.querySelector("#editBack").addEventListener("click", closeEditModal);
+document.querySelector("#editModal").addEventListener("click", (event) => {
+  if (event.target.id === "editModal") closeEditModal();
+});
+document.querySelector("#archiveList").addEventListener("click", (event) => {
+  const button = event.target.closest("button");
+  if (button?.dataset.archiveAction === "restore") restoreTicket(button.dataset.id);
+});
+document.querySelector("#chatForm").addEventListener("submit", addChatMessage);
+document.querySelector("#templateForm").addEventListener("submit", addTemplate);
+document.querySelector("#templateList").addEventListener("click", (event) => {
+  const button = event.target.closest("button");
+  if (!button) return;
+  const template = templates.find((item) => item.id === button.dataset.id);
+  if (!template) return;
+  if (button.dataset.templateAction === "create") createTicketFromTemplate(template);
+  if (button.dataset.templateAction === "delete") {
+    templates = templates.filter((item) => item.id !== template.id);
+    persistState();
+    renderTemplates();
+  }
+});
 document.addEventListener("keydown", (event) => {
   if (event.key === "Escape" && !document.querySelector("#completionModal").hidden) closeCompletionModal();
+  if (event.key === "Escape" && !document.querySelector("#editModal").hidden) closeEditModal();
 });
 
 populateSelects();
+setDefaultTemplateDate();
+showAuthIfNeeded();
 renderAll();
