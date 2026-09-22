@@ -168,14 +168,14 @@ const users = [
     role: "manager",
     roleName: "Управляющая кофейни",
     permissions: "own",
-    authCode: getAuthCodeForName(manager.name, "1111"),
+    authCode: getAuthCodeForName(manager.name),
   })),
   ...departmentManagers.map((manager) => ({
     ...manager,
     label: `${manager.name} · ${manager.location.toLowerCase()}`,
     role: "manager",
     permissions: "own",
-    authCode: getAuthCodeForName(manager.name, "2222"),
+    authCode: getAuthCodeForName(manager.name),
   })),
   {
     id: "vasilyeva",
@@ -453,9 +453,20 @@ function visitLabel(value) {
   return { yes: "Да", no: "Нет", unsure: "Сомневаюсь", true: "Да", false: "Нет" }[String(value)] || "Да";
 }
 
+const nameCollator = new Intl.Collator("ru-RU", { sensitivity: "base" });
+
+function compareByName(a, b) {
+  return nameCollator.compare(a.name, b.name) || nameCollator.compare(a.label || "", b.label || "");
+}
+
+function makeFallbackAuthCode(name) {
+  const seed = Array.from(String(name || "")).reduce((sum, char) => sum + char.charCodeAt(0), 0);
+  return String(1000 + (seed % 9000));
+}
+
 function getAuthCodeForName(name, fallback) {
   const employee = employees.find((item) => item.name === name);
-  return employee ? String(employee.id).padStart(4, "0") : fallback;
+  return employee ? String(employee.id).padStart(4, "0") : (fallback || makeFallbackAuthCode(name));
 }
 
 function escapeHtml(value) {
@@ -558,10 +569,49 @@ function isClosedStatus(status) {
   return ["done", "not_approved"].includes(status);
 }
 
+function getSortedUsers() {
+  return [...users].sort(compareByName);
+}
+
+function userMatchesQuery(user, query) {
+  const haystack = [user.name, user.label, user.roleName, user.location, ...(user.locations || [])]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+  return haystack.includes(query.toLowerCase());
+}
+
+function renderUserOptions(userList) {
+  return userList
+    .map((user) => `<option value="${escapeHtml(user.id)}">${escapeHtml(user.label)}</option>`)
+    .join("");
+}
+
+function updateLoginUserOptions() {
+  const input = document.querySelector("#loginSearchInput");
+  const select = document.querySelector("#loginUserInput");
+  const previousValue = select.value || currentUser.id;
+  const query = input.value.trim();
+  const matchingUsers = getSortedUsers().filter((user) => !query || userMatchesQuery(user, query));
+
+  select.innerHTML = matchingUsers.length
+    ? renderUserOptions(matchingUsers)
+    : `<option value="">Сотрудник не найден</option>`;
+
+  if (matchingUsers.some((user) => user.id === previousValue)) {
+    select.value = previousValue;
+  } else if (matchingUsers[0]) {
+    select.value = matchingUsers[0].id;
+  }
+}
+
 function populateSelects() {
-  document.querySelector("#loginUserInput").innerHTML = users.map((user) => `<option value="${user.id}">${user.label}</option>`).join("");
-  document.querySelector("#roleInput").innerHTML = users.map((user) => `<option value="${user.id}">${user.label}</option>`).join("");
-  document.querySelector("#assigneeInput").innerHTML = engineers
+  const sortedUsers = getSortedUsers();
+  const sortedEngineers = [...engineers].sort(compareByName);
+
+  updateLoginUserOptions();
+  document.querySelector("#roleInput").innerHTML = renderUserOptions(sortedUsers);
+  document.querySelector("#assigneeInput").innerHTML = sortedEngineers
     .map((engineer) => `<option value="${engineer.id}">${engineer.name} · ${engineer.role}</option>`)
     .join("");
   document.querySelector("#templateAssigneeInput").innerHTML = document.querySelector("#assigneeInput").innerHTML;
@@ -571,9 +621,9 @@ function populateSelects() {
   });
   document.querySelector("#editRequesterInput").innerHTML = requesters.map((name) => `<option>${name}</option>`).join("");
   document.querySelector("#editAssigneeInput").innerHTML = document.querySelector("#assigneeInput").innerHTML;
-  document.querySelector("#personFilterInput").innerHTML = `<option value="all">Все</option>${users.map((user) => `<option value="${user.name}">${user.name}</option>`).join("")}`;
-  document.querySelector("#contractorFilterInput").innerHTML = `<option value="all">Все</option>${engineers.map((engineer) => `<option value="${engineer.id}">${engineer.name}</option>`).join("")}`;
-  document.querySelector("#chatRecipientInput").innerHTML = `<option value="all">Всем</option>${users.map((user) => `<option value="${user.id}">${user.label}</option>`).join("")}`;
+  document.querySelector("#personFilterInput").innerHTML = `<option value="all">Все</option>${sortedUsers.map((user) => `<option value="${escapeHtml(user.name)}">${escapeHtml(user.name)}</option>`).join("")}`;
+  document.querySelector("#contractorFilterInput").innerHTML = `<option value="all">Все</option>${sortedEngineers.map((engineer) => `<option value="${escapeHtml(engineer.id)}">${escapeHtml(engineer.name)}</option>`).join("")}`;
+  document.querySelector("#chatRecipientInput").innerHTML = `<option value="all">Всем</option>${renderUserOptions(sortedUsers)}`;
   updateRequestScope();
 }
 
@@ -784,6 +834,8 @@ function renderTickets() {
 
 function renderEngineers() {
   document.querySelector("#engineerList").innerHTML = engineers
+    .slice()
+    .sort(compareByName)
     .map((engineer) => {
       const load = currentLoad(engineer.id);
       const percent = Math.round((load / engineer.capacity) * 100);
@@ -987,6 +1039,11 @@ function login(event) {
   event.preventDefault();
   const user = users.find((item) => item.id === document.querySelector("#loginUserInput").value);
   const code = document.querySelector("#loginCodeInput").value.trim();
+  if (!user) {
+    document.querySelector("#authError").textContent = "Сотрудник не найден.";
+    return;
+  }
+
   if (!user || code !== user.authCode) {
     document.querySelector("#authError").textContent = "Неверный код доступа.";
     return;
@@ -1272,6 +1329,7 @@ document.addEventListener("input", (event) => {
 });
 
 document.querySelector("#loginForm").addEventListener("submit", login);
+document.querySelector("#loginSearchInput").addEventListener("input", updateLoginUserOptions);
 document.querySelector("#logoutButton").addEventListener("click", logout);
 document.querySelector("#ticketForm").addEventListener("submit", addTicketFromForm);
 document.querySelector("#requestPhotoInput").addEventListener("change", handleRequestPhoto);
